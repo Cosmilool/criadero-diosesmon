@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Criadero Diosesmon - Gen 1-3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:#12141c;color:#e6e8ef;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,#2a1b4d,#1b3a5c);padding:20px 16px;border-bottom:2px solid #3d4a6b}
+h1{font-size:22px;letter-spacing:.5px}
+h1 span{color:#ffcb05}
+.sub{font-size:13px;color:#9aa3bd;margin-top:4px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0}
+nav button{background:#1e2233;color:#9aa3bd;border:1px solid #2f3550;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:14px}
+nav button:hover{background:#262c42;color:#e6e8ef}
+nav button.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.panel{display:none}.panel.on{display:block}
+.card{background:#1a1e2c;border:1px solid #2a3048;border-radius:10px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{font-size:12px;color:#9aa3bd;display:block;margin-bottom:4px}
+input,select{background:#12141c;border:1px solid #333b57;color:#e6e8ef;padding:8px 10px;border-radius:6px;font-size:14px;width:100%}
+input:focus,select:focus{outline:none;border-color:#3b5bdb}
+.btn{background:#3b5bdb;color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+.btn:hover{background:#4c6ef5}
+.btn.g{background:#2b8a3e}.btn.g:hover{background:#37b24d}
+.btn.r{background:#3a2030;color:#ff8787;border:1px solid #5c2b3b}
+.btn.r:hover{background:#4d2a3d}
+.btn.s{padding:5px 10px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.iv{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.iv div{text-align:center}
+.iv label{font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.iv input{text-align:center;padding:6px 2px;font-weight:600}
+.v31{border-color:#2b8a3e!important;background:#132a1a!important;color:#69db7c!important}
+.v0{border-color:#5c2b3b!important;color:#ff8787!important}
+.tag{display:inline-block;background:#252b40;border:1px solid #3a4260;color:#a9b4d0;padding:2px 8px;border-radius:999px;font-size:11px;margin:2px 3px 2px 0}
+.tag.e{background:#1d2f45;border-color:#2c4a6b;color:#74c0fc}
+.mon{background:#1a1e2c;border:1px solid #2a3048;border-radius:10px;padding:12px}
+.mon h4{font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mon .sp{font-size:12px;color:#9aa3bd}
+.big{font-size:26px;font-weight:700;color:#ffcb05}
+.ok{color:#69db7c}.bad{color:#ff8787}.warn{color:#ffd43b}
+.muted{color:#9aa3bd;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #262c42}
+th{color:#9aa3bd;font-weight:600;font-size:11px;text-transform:uppercase}
+.hide{display:none}
+.list{max-height:420px;overflow-y:auto}
+.pill{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600}
+.pill.m{background:#1d2f45;color:#74c0fc}
+.pill.f{background:#3a2030;color:#ffa8c5}
+.pill.n{background:#2a2f42;color:#9aa3bd}
+hr{border:none;border-top:1px solid #262c42;margin:12px 0}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Criadero <span>Diosesmon</span></h1>
+<div class="sub">Gen 1-3 (386) &middot; Lazo Destino + objeto de poder &middot; datos: PokeAPI</div>
+</div></header>
+<div class="wrap">
+<nav>
+<button data-t="box" class="on">Mi Caja</button>
+<button data-t="pair">Emparejar</button>
+<button data-t="dex">Buscar Pokemon</button>
+<button data-t="eggs">Grupos Huevo</button>
+<button data-t="help">Como funciona</button>
+</nav>
+<div id="box" class="panel on">
+ <div class="card">
+  <div class="row" style="justify-content:space-between">
+   <div><b>Mis Pokemon</b> <span class="muted" id="boxCount"></span></div>
+   <div class="row" style="gap:6px">
+    <button class="btn g" id="addBtn">+ Anadir</button>
+    <button class="btn s" id="expBtn">Exportar</button>
+    <button class="btn s" id="impBtn">Importar</button>
+   </div>
+  </div>
+ </div>
+ <div class="card hide" id="form">
+  <div class="row">
+   <div style="flex:2;min-width:200px"><label>Especie</label>
+    <input id="fSpecies" list="dlist" placeholder="magikarp, slowpoke..." autocomplete="off"></div>
+   <div style="flex:1;min-width:120px"><label>Mote (opcional)</label><input id="fNick" placeholder="-"></div>
+   <div style="flex:1;min-width:110px"><label>Sexo</label>
+    <select id="fSex"><option value="M">Macho</option><option value="F">Hembra</option><option value="N">Sin sexo</option></select></div>
+  </div>
+  <div class="iv">
+   <div><label>PS</label><input class="ivi" data-i="0" value="0"></div>
+   <div><label>Ata</label><input class="ivi" data-i="1" value="0"></div>
+   <div><label>Def</label><input class="ivi" data-i="2" value="0"></div>
+   <div><label>AtEsp</label><input class="ivi" data-i="3" value="0"></div>
+   <div><label>DefEsp</label><input class="ivi" data-i="4" value="0"></div>
+   <div><label>Vel</label><input class="ivi" data-i="5" value="0"></div>
+  </div>
+  <div class="row" style="margin-top:10px;justify-content:space-between">
+   <div class="muted">Pon 31 en los IV perfectos. Deja 0 si no lo sabes.</div>
+   <div class="row" style="gap:6px">
+    <button class="btn s" id="all31">Todo 31</button>
+    <button class="btn s" id="all0">Limpiar</button>
+    <button class="btn g" id="saveBtn">Guardar</button>
+    <button class="btn s" id="cancelBtn">Cancelar</button>
+   </div>
+  </div>
+ </div>
+ <div id="boxList" class="grid"></div>
+</div>
+
+<div id="pair" class="panel">
+ <div class="card">
+  <b>Elige la pareja</b>
+  <div class="row" style="margin-top:10px">
+   <div style="flex:1;min-width:200px"><label>Madre (o Ditto)</label><select id="pMom"></select></div>
+   <div style="flex:1;min-width:200px"><label>Padre (o Ditto)</label><select id="pDad"></select></div>
+  </div>
+ </div>
+ <div id="pairOut"></div>
+ <div class="card">
+  <b>Mejores parejas de tu caja</b>
+  <div class="muted" style="margin:6px 0 10px">Ordenadas por probabilidad de sacar 6x31 en un solo huevo.</div>
+  <div id="bestOut" class="list"></div>
+ </div>
+</div>
+
+<div id="dex" class="panel">
+ <div class="card">
+  <label>Busca un Pokemon</label>
+  <input id="dSearch" list="dlist" placeholder="escribe un nombre..." autocomplete="off">
+ </div>
+ <div id="dexOut"></div>
+</div>
+
+<div id="eggs" class="panel">
+ <div class="card">
+  <label>Grupo de huevo</label>
+  <select id="eSel"></select>
+ </div>
+ <div id="eggOut"></div>
+</div>
+
+<div id="help" class="panel"></div>
+<datalist id="dlist"></datalist>
+</div>
+<script>
+const DEX = [{"id":1,"slug":"bulbasaur","name":"Bulbasaur","eggs":["monster","grass"],"g":"B"},{"id":2,"slug":"ivysaur","name":"Ivysaur","eggs":["monster","grass"],"g":"B"},{"id":3,"slug":"venusaur","name":"Venusaur","eggs":["monster","grass"],"g":"B"},{"id":4,"slug":"charmander","name":"Charmander","eggs":["monster","dragon"],"g":"B"},{"id":5,"slug":"charmeleon","name":"Charmeleon","eggs":["monster","dragon"],"g":"B"},{"id":6,"slug":"charizard","name":"Charizard","eggs":["monster","dragon"],"g":"B"},{"id":7,"slug":"squirtle","name":"Squirtle","eggs":["monster","water1"],"g":"B"},{"id":8,"slug":"wartortle","name":"Wartortle","eggs":["monster","water1"],"g":"B"},{"id":9,"slug":"blastoise","name":"Blastoise","eggs":["monster","water1"],"g":"B"},{"id":10,"slug":"caterpie","name":"Caterpie","eggs":["bug"],"g":"B"},{"id":11,"slug":"metapod","name":"Metapod","eggs":["bug"],"g":"B"},{"id":12,"slug":"butterfree","name":"Butterfree","eggs":["bug"],"g":"B"},{"id":13,"slug":"weedle","name":"Weedle","eggs":["bug"],"g":"B"},{"id":14,"slug":"kakuna","name":"Kakuna","eggs":["bug"],"g":"B"},{"id":15,"slug":"beedrill","name":"Beedrill","eggs":["bug"],"g":"B"},{"id":16,"slug":"pidgey","name":"Pidgey","eggs":["flying"],"g":"B"},{"id":17,"slug":"pidgeotto","name":"Pidgeotto","eggs":["flying"],"g":"B"},{"id":18,"slug":"pidgeot","name":"Pidgeot","eggs":["flying"],"g":"B"},{"id":19,"slug":"rattata","name":"Rattata","eggs":["field"],"g":"B"},{"id":20,"slug":"raticate","name":"Raticate","eggs":["field"],"g":"B"},{"id":21,"slug":"spearow","name":"Spearow","eggs":["flying"],"g":"B"},{"id":22,"slug":"fearow","name":"Fearow","eggs":["flying"],"g":"B"},{"id":23,"slug":"ekans","name":"Ekans","eggs":["field","dragon"],"g":"B"},{"id":24,"slug":"arbok","name":"Arbok","eggs":["field","dragon"],"g":"B"},{"id":25,"slug":"pikachu","name":"Pikachu","eggs":["field","fairy"],"g":"B"},{"id":26,"slug":"raichu","name":"Raichu","eggs":["field","fairy"],"g":"B"},{"id":27,"slug":"sandshrew","name":"Sandshrew","eggs":["field"],"g":"B"},{"id":28,"slug":"sandslash","name":"Sandslash","eggs":["field"],"g":"B"},{"id":29,"slug":"nidoran-f","name":"Nidoran F","eggs":["monster","field"],"g":"F"},{"id":30,"slug":"nidorina","name":"Nidorina","eggs":["noeggs"],"g":"F"},{"id":31,"slug":"nidoqueen","name":"Nidoqueen","eggs":["noeggs"],"g":"F"},{"id":32,"slug":"nidoran-m","name":"Nidoran M","eggs":["monster","field"],"g":"M"},{"id":33,"slug":"nidorino","name":"Nidorino","eggs":["monster","field"],"g":"M"},{"id":34,"slug":"nidoking","name":"Nidoking","eggs":["monster","field"],"g":"M"},{"id":35,"slug":"clefairy","name":"Clefairy","eggs":["fairy"],"g":"B"},{"id":36,"slug":"clefable","name":"Clefable","eggs":["fairy"],"g":"B"},{"id":37,"slug":"vulpix","name":"Vulpix","eggs":["field"],"g":"B"},{"id":38,"slug":"ninetales","name":"Ninetales","eggs":["field"],"g":"B"},{"id":39,"slug":"jigglypuff","name":"Jigglypuff","eggs":["fairy"],"g":"B"},{"id":40,"slug":"wigglytuff","name":"Wigglytuff","eggs":["fairy"],"g":"B"},{"id":41,"slug":"zubat","name":"Zubat","eggs":["flying"],"g":"B"},{"id":42,"slug":"golbat","name":"Golbat","eggs":["flying"],"g":"B"},{"id":43,"slug":"oddish","name":"Oddish","eggs":["grass"],"g":"B"},{"id":44,"slug":"gloom","name":"Gloom","eggs":["grass"],"g":"B"},{"id":45,"slug":"vileplume","name":"Vileplume","eggs":["grass"],"g":"B"},{"id":46,"slug":"paras","name":"Paras","eggs":["bug","grass"],"g":"B"},{"id":47,"slug":"parasect","name":"Parasect","eggs":["bug","grass"],"g":"B"},{"id":48,"slug":"venonat","name":"Venonat","eggs":["bug"],"g":"B"},{"id":49,"slug":"venomoth","name":"Venomoth","eggs":["bug"],"g":"B"},{"id":50,"slug":"diglett","name":"Diglett","eggs":["field"],"g":"B"},{"id":51,"slug":"dugtrio","name":"Dugtrio","eggs":["field"],"g":"B"},{"id":52,"slug":"meowth","name":"Meowth","eggs":["field"],"g":"B"},{"id":53,"slug":"persian","name":"Persian","eggs":["field"],"g":"B"},{"id":54,"slug":"psyduck","name":"Psyduck","eggs":["water1","field"],"g":"B"},{"id":55,"slug":"golduck","name":"Golduck","eggs":["water1","field"],"g":"B"},{"id":56,"slug":"mankey","name":"Mankey","eggs":["field"],"g":"B"},{"id":57,"slug":"primeape","name":"Primeape","eggs":["field"],"g":"B"},{"id":58,"slug":"growlithe","name":"Growlithe","eggs":["field"],"g":"B"},{"id":59,"slug":"arcanine","name":"Arcanine","eggs":["field"],"g":"B"},{"id":60,"slug":"poliwag","name":"Poliwag","eggs":["water1"],"g":"B"},{"id":61,"slug":"poliwhirl","name":"Poliwhirl","eggs":["water1"],"g":"B"},{"id":62,"slug":"poliwrath","name":"Poliwrath","eggs":["water1"],"g":"B"},{"id":63,"slug":"abra","name":"Abra","eggs":["humanlike"],"g":"B"},{"id":64,"slug":"kadabra","name":"Kadabra","eggs":["humanlike"],"g":"B"},{"id":65,"slug":"alakazam","name":"Alakazam","eggs":["humanlike"],"g":"B"},{"id":66,"slug":"machop","name":"Machop","eggs":["humanlike"],"g":"B"},{"id":67,"slug":"machoke","name":"Machoke","eggs":["humanlike"],"g":"B"},{"id":68,"slug":"machamp","name":"Machamp","eggs":["humanlike"],"g":"B"},{"id":69,"slug":"bellsprout","name":"Bellsprout","eggs":["grass"],"g":"B"},{"id":70,"slug":"weepinbell","name":"Weepinbell","eggs":["grass"],"g":"B"},{"id":71,"slug":"victreebel","name":"Victreebel","eggs":["grass"],"g":"B"},{"id":72,"slug":"tentacool","name":"Tentacool","eggs":["water3"],"g":"B"},{"id":73,"slug":"tentacruel","name":"Tentacruel","eggs":["water3"],"g":"B"},{"id":74,"slug":"geodude","name":"Geodude","eggs":["mineral"],"g":"B"},{"id":75,"slug":"graveler","name":"Graveler","eggs":["mineral"],"g":"B"},{"id":76,"slug":"golem","name":"Golem","eggs":["mineral"],"g":"B"},{"id":77,"slug":"ponyta","name":"Ponyta","eggs":["field"],"g":"B"},{"id":78,"slug":"rapidash","name":"Rapidash","eggs":["field"],"g":"B"},{"id":79,"slug":"slowpoke","name":"Slowpoke","eggs":["monster","water1"],"g":"B"},{"id":80,"slug":"slowbro","name":"Slowbro","eggs":["monster","water1"],"g":"B"},{"id":81,"slug":"magnemite","name":"Magnemite","eggs":["mineral"],"g":"N"},{"id":82,"slug":"magneton","name":"Magneton","eggs":["mineral"],"g":"N"},{"id":83,"slug":"farfetchd","name":"Farfetch'd","eggs":["flying","field"],"g":"B"},{"id":84,"slug":"doduo","name":"Doduo","eggs":["flying"],"g":"B"},{"id":85,"slug":"dodrio","name":"Dodrio","eggs":["flying"],"g":"B"},{"id":86,"slug":"seel","name":"Seel","eggs":["water1","field"],"g":"B"},{"id":87,"slug":"dewgong","name":"Dewgong","eggs":["water1","field"],"g":"B"},{"id":88,"slug":"grimer","name":"Grimer","eggs":["amorphous"],"g":"B"},{"id":89,"slug":"muk","name":"Muk","eggs":["amorphous"],"g":"B"},{"id":90,"slug":"shellder","name":"Shellder","eggs":["water3"],"g":"B"},{"id":91,"slug":"cloyster","name":"Cloyster","eggs":["water3"],"g":"B"},{"id":92,"slug":"gastly","name":"Gastly","eggs":["amorphous"],"g":"B"},{"id":93,"slug":"haunter","name":"Haunter","eggs":["amorphous"],"g":"B"},{"id":94,"slug":"gengar","name":"Gengar","eggs":["amorphous"],"g":"B"},{"id":95,"slug":"onix","name":"Onix","eggs":["mineral"],"g":"B"},{"id":96,"slug":"drowzee","name":"Drowzee","eggs":["humanlike"],"g":"B"},{"id":97,"slug":"hypno","name":"Hypno","eggs":["humanlike"],"g":"B"},{"id":98,"slug":"krabby","name":"Krabby","eggs":["water3"],"g":"B"},{"id":99,"slug":"kingler","name":"Kingler","eggs":["water3"],"g":"B"},{"id":100,"slug":"voltorb","name":"Voltorb","eggs":["mineral"],"g":"N"},{"id":101,"slug":"electrode","name":"Electrode","eggs":["mineral"],"g":"N"},{"id":102,"slug":"exeggcute","name":"Exeggcute","eggs":["grass"],"g":"B"},{"id":103,"slug":"exeggutor","name":"Exeggutor","eggs":["grass"],"g":"B"},{"id":104,"slug":"cubone","name":"Cubone","eggs":["monster"],"g":"B"},{"id":105,"slug":"marowak","name":"Marowak","eggs":["monster"],"g":"B"},{"id":106,"slug":"hitmonlee","name":"Hitmonlee","eggs":["humanlike"],"g":"M"},{"id":107,"slug":"hitmonchan","name":"Hitmonchan","eggs":["humanlike"],"g":"M"},{"id":108,"slug":"lickitung","name":"Lickitung","eggs":["monster"],"g":"B"},{"id":109,"slug":"koffing","name":"Koffing","eggs":["amorphous"],"g":"B"},{"id":110,"slug":"weezing","name":"Weezing","eggs":["amorphous"],"g":"B"},{"id":111,"slug":"rhyhorn","name":"Rhyhorn","eggs":["monster","field"],"g":"B"},{"id":112,"slug":"rhydon","name":"Rhydon","eggs":["monster","field"],"g":"B"},{"id":113,"slug":"chansey","name":"Chansey","eggs":["fairy"],"g":"F"},{"id":114,"slug":"tangela","name":"Tangela","eggs":["grass"],"g":"B"},{"id":115,"slug":"kangaskhan","name":"Kangaskhan","eggs":["monster"],"g":"F"},{"id":116,"slug":"horsea","name":"Horsea","eggs":["water1","dragon"],"g":"B"},{"id":117,"slug":"seadra","name":"Seadra","eggs":["water1","dragon"],"g":"B"},{"id":118,"slug":"goldeen","name":"Goldeen","eggs":["water2"],"g":"B"},{"id":119,"slug":"seaking","name":"Seaking","eggs":["water2"],"g":"B"},{"id":120,"slug":"staryu","name":"Staryu","eggs":["water3"],"g":"N"},{"id":121,"slug":"starmie","name":"Starmie","eggs":["water3"],"g":"N"},{"id":122,"slug":"mr-mime","name":"Mr. Mime","eggs":["humanlike"],"g":"B"},{"id":123,"slug":"scyther","name":"Scyther","eggs":["bug"],"g":"B"},{"id":124,"slug":"jynx","name":"Jynx","eggs":["humanlike"],"g":"F"},{"id":125,"slug":"electabuzz","name":"Electabuzz","eggs":["humanlike"],"g":"B"},{"id":126,"slug":"magmar","name":"Magmar","eggs":["humanlike"],"g":"B"},{"id":127,"slug":"pinsir","name":"Pinsir","eggs":["bug"],"g":"B"},{"id":128,"slug":"tauros","name":"Tauros","eggs":["field"],"g":"M"},{"id":129,"slug":"magikarp","name":"Magikarp","eggs":["water2","dragon"],"g":"B"},{"id":130,"slug":"gyarados","name":"Gyarados","eggs":["water2","dragon"],"g":"B"},{"id":131,"slug":"lapras","name":"Lapras","eggs":["monster","water1"],"g":"B"},{"id":132,"slug":"ditto","name":"Ditto","eggs":["ditto"],"g":"N"},{"id":133,"slug":"eevee","name":"Eevee","eggs":["field"],"g":"B"},{"id":134,"slug":"vaporeon","name":"Vaporeon","eggs":["field"],"g":"B"},{"id":135,"slug":"jolteon","name":"Jolteon","eggs":["field"],"g":"B"},{"id":136,"slug":"flareon","name":"Flareon","eggs":["field"],"g":"B"},{"id":137,"slug":"porygon","name":"Porygon","eggs":["mineral"],"g":"N"},{"id":138,"slug":"omanyte","name":"Omanyte","eggs":["water1","water3"],"g":"B"},{"id":139,"slug":"omastar","name":"Omastar","eggs":["water1","water3"],"g":"B"},{"id":140,"slug":"kabuto","name":"Kabuto","eggs":["water1","water3"],"g":"B"},{"id":141,"slug":"kabutops","name":"Kabutops","eggs":["water1","water3"],"g":"B"},{"id":142,"slug":"aerodactyl","name":"Aerodactyl","eggs":["flying"],"g":"B"},{"id":143,"slug":"snorlax","name":"Snorlax","eggs":["monster"],"g":"B"},{"id":144,"slug":"articuno","name":"Articuno","eggs":["noeggs"],"g":"N"},{"id":145,"slug":"zapdos","name":"Zapdos","eggs":["noeggs"],"g":"N"},{"id":146,"slug":"moltres","name":"Moltres","eggs":["noeggs"],"g":"N"},{"id":147,"slug":"dratini","name":"Dratini","eggs":["water1","dragon"],"g":"B"},{"id":148,"slug":"dragonair","name":"Dragonair","eggs":["water1","dragon"],"g":"B"},{"id":149,"slug":"dragonite","name":"Dragonite","eggs":["water1","dragon"],"g":"B"},{"id":150,"slug":"mewtwo","name":"Mewtwo","eggs":["noeggs"],"g":"N"},{"id":151,"slug":"mew","name":"Mew","eggs":["noeggs"],"g":"N"},{"id":152,"slug":"chikorita","name":"Chikorita","eggs":["monster","grass"],"g":"B"},{"id":153,"slug":"bayleef","name":"Bayleef","eggs":["monster","grass"],"g":"B"},{"id":154,"slug":"meganium","name":"Meganium","eggs":["monster","grass"],"g":"B"},{"id":155,"slug":"cyndaquil","name":"Cyndaquil","eggs":["field"],"g":"B"},{"id":156,"slug":"quilava","name":"Quilava","eggs":["field"],"g":"B"},{"id":157,"slug":"typhlosion","name":"Typhlosion","eggs":["field"],"g":"B"},{"id":158,"slug":"totodile","name":"Totodile","eggs":["monster","water1"],"g":"B"},{"id":159,"slug":"croconaw","name":"Croconaw","eggs":["monster","water1"],"g":"B"},{"id":160,"slug":"feraligatr","name":"Feraligatr","eggs":["monster","water1"],"g":"B"},{"id":161,"slug":"sentret","name":"Sentret","eggs":["field"],"g":"B"},{"id":162,"slug":"furret","name":"Furret","eggs":["field"],"g":"B"},{"id":163,"slug":"hoothoot","name":"Hoothoot","eggs":["flying"],"g":"B"},{"id":164,"slug":"noctowl","name":"Noctowl","eggs":["flying"],"g":"B"},{"id":165,"slug":"ledyba","name":"Ledyba","eggs":["bug"],"g":"B"},{"id":166,"slug":"ledian","name":"Ledian","eggs":["bug"],"g":"B"},{"id":167,"slug":"spinarak","name":"Spinarak","eggs":["bug"],"g":"B"},{"id":168,"slug":"ariados","name":"Ariados","eggs":["bug"],"g":"B"},{"id":169,"slug":"crobat","name":"Crobat","eggs":["flying"],"g":"B"},{"id":170,"slug":"chinchou","name":"Chinchou","eggs":["water2"],"g":"B"},{"id":171,"slug":"lanturn","name":"Lanturn","eggs":["water2"],"g":"B"},{"id":172,"slug":"pichu","name":"Pichu","eggs":["noeggs"],"g":"B"},{"id":173,"slug":"cleffa","name":"Cleffa","eggs":["noeggs"],"g":"B"},{"id":174,"slug":"igglybuff","name":"Igglybuff","eggs":["noeggs"],"g":"B"},{"id":175,"slug":"togepi","name":"Togepi","eggs":["noeggs"],"g":"B"},{"id":176,"slug":"togetic","name":"Togetic","eggs":["flying","fairy"],"g":"B"},{"id":177,"slug":"natu","name":"Natu","eggs":["flying"],"g":"B"},{"id":178,"slug":"xatu","name":"Xatu","eggs":["flying"],"g":"B"},{"id":179,"slug":"mareep","name":"Mareep","eggs":["monster","field"],"g":"B"},{"id":180,"slug":"flaaffy","name":"Flaaffy","eggs":["monster","field"],"g":"B"},{"id":181,"slug":"ampharos","name":"Ampharos","eggs":["monster","field"],"g":"B"},{"id":182,"slug":"bellossom","name":"Bellossom","eggs":["grass"],"g":"B"},{"id":183,"slug":"marill","name":"Marill","eggs":["water1","fairy"],"g":"B"},{"id":184,"slug":"azumarill","name":"Azumarill","eggs":["water1","fairy"],"g":"B"},{"id":185,"slug":"sudowoodo","name":"Sudowoodo","eggs":["mineral"],"g":"B"},{"id":186,"slug":"politoed","name":"Politoed","eggs":["water1"],"g":"B"},{"id":187,"slug":"hoppip","name":"Hoppip","eggs":["fairy","grass"],"g":"B"},{"id":188,"slug":"skiploom","name":"Skiploom","eggs":["fairy","grass"],"g":"B"},{"id":189,"slug":"jumpluff","name":"Jumpluff","eggs":["fairy","grass"],"g":"B"},{"id":190,"slug":"aipom","name":"Aipom","eggs":["field"],"g":"B"},{"id":191,"slug":"sunkern","name":"Sunkern","eggs":["grass"],"g":"B"},{"id":192,"slug":"sunflora","name":"Sunflora","eggs":["grass"],"g":"B"},{"id":193,"slug":"yanma","name":"Yanma","eggs":["bug"],"g":"B"},{"id":194,"slug":"wooper","name":"Wooper","eggs":["water1","field"],"g":"B"},{"id":195,"slug":"quagsire","name":"Quagsire","eggs":["water1","field"],"g":"B"},{"id":196,"slug":"espeon","name":"Espeon","eggs":["field"],"g":"B"},{"id":197,"slug":"umbreon","name":"Umbreon","eggs":["field"],"g":"B"},{"id":198,"slug":"murkrow","name":"Murkrow","eggs":["flying"],"g":"B"},{"id":199,"slug":"slowking","name":"Slowking","eggs":["monster","water1"],"g":"B"},{"id":200,"slug":"misdreavus","name":"Misdreavus","eggs":["amorphous"],"g":"B"},{"id":201,"slug":"unown","name":"Unown","eggs":["noeggs"],"g":"N"},{"id":202,"slug":"wobbuffet","name":"Wobbuffet","eggs":["amorphous"],"g":"B"},{"id":203,"slug":"girafarig","name":"Girafarig","eggs":["field"],"g":"B"},{"id":204,"slug":"pineco","name":"Pineco","eggs":["bug"],"g":"B"},{"id":205,"slug":"forretress","name":"Forretress","eggs":["bug"],"g":"B"},{"id":206,"slug":"dunsparce","name":"Dunsparce","eggs":["field"],"g":"B"},{"id":207,"slug":"gligar","name":"Gligar","eggs":["bug"],"g":"B"},{"id":208,"slug":"steelix","name":"Steelix","eggs":["mineral"],"g":"B"},{"id":209,"slug":"snubbull","name":"Snubbull","eggs":["field","fairy"],"g":"B"},{"id":210,"slug":"granbull","name":"Granbull","eggs":["field","fairy"],"g":"B"},{"id":211,"slug":"qwilfish","name":"Qwilfish","eggs":["water2"],"g":"B"},{"id":212,"slug":"scizor","name":"Scizor","eggs":["bug"],"g":"B"},{"id":213,"slug":"shuckle","name":"Shuckle","eggs":["bug"],"g":"B"},{"id":214,"slug":"heracross","name":"Heracross","eggs":["bug"],"g":"B"},{"id":215,"slug":"sneasel","name":"Sneasel","eggs":["field"],"g":"B"},{"id":216,"slug":"teddiursa","name":"Teddiursa","eggs":["field"],"g":"B"},{"id":217,"slug":"ursaring","name":"Ursaring","eggs":["field"],"g":"B"},{"id":218,"slug":"slugma","name":"Slugma","eggs":["amorphous"],"g":"B"},{"id":219,"slug":"magcargo","name":"Magcargo","eggs":["amorphous"],"g":"B"},{"id":220,"slug":"swinub","name":"Swinub","eggs":["field"],"g":"B"},{"id":221,"slug":"piloswine","name":"Piloswine","eggs":["field"],"g":"B"},{"id":222,"slug":"corsola","name":"Corsola","eggs":["water1","water3"],"g":"B"},{"id":223,"slug":"remoraid","name":"Remoraid","eggs":["water1","water2"],"g":"B"},{"id":224,"slug":"octillery","name":"Octillery","eggs":["water1","water2"],"g":"B"},{"id":225,"slug":"delibird","name":"Delibird","eggs":["water1","field"],"g":"B"},{"id":226,"slug":"mantine","name":"Mantine","eggs":["water1"],"g":"B"},{"id":227,"slug":"skarmory","name":"Skarmory","eggs":["flying"],"g":"B"},{"id":228,"slug":"houndour","name":"Houndour","eggs":["field"],"g":"B"},{"id":229,"slug":"houndoom","name":"Houndoom","eggs":["field"],"g":"B"},{"id":230,"slug":"kingdra","name":"Kingdra","eggs":["water1","dragon"],"g":"B"},{"id":231,"slug":"phanpy","name":"Phanpy","eggs":["field"],"g":"B"},{"id":232,"slug":"donphan","name":"Donphan","eggs":["field"],"g":"B"},{"id":233,"slug":"porygon2","name":"Porygon2","eggs":["mineral"],"g":"N"},{"id":234,"slug":"stantler","name":"Stantler","eggs":["field"],"g":"B"},{"id":235,"slug":"smeargle","name":"Smeargle","eggs":["field"],"g":"B"},{"id":236,"slug":"tyrogue","name":"Tyrogue","eggs":["noeggs"],"g":"M"},{"id":237,"slug":"hitmontop","name":"Hitmontop","eggs":["humanlike"],"g":"M"},{"id":238,"slug":"smoochum","name":"Smoochum","eggs":["noeggs"],"g":"F"},{"id":239,"slug":"elekid","name":"Elekid","eggs":["noeggs"],"g":"B"},{"id":240,"slug":"magby","name":"Magby","eggs":["noeggs"],"g":"B"},{"id":241,"slug":"miltank","name":"Miltank","eggs":["field"],"g":"F"},{"id":242,"slug":"blissey","name":"Blissey","eggs":["fairy"],"g":"F"},{"id":243,"slug":"raikou","name":"Raikou","eggs":["noeggs"],"g":"N"},{"id":244,"slug":"entei","name":"Entei","eggs":["noeggs"],"g":"N"},{"id":245,"slug":"suicune","name":"Suicune","eggs":["noeggs"],"g":"N"},{"id":246,"slug":"larvitar","name":"Larvitar","eggs":["monster"],"g":"B"},{"id":247,"slug":"pupitar","name":"Pupitar","eggs":["monster"],"g":"B"},{"id":248,"slug":"tyranitar","name":"Tyranitar","eggs":["monster"],"g":"B"},{"id":249,"slug":"lugia","name":"Lugia","eggs":["noeggs"],"g":"N"},{"id":250,"slug":"ho-oh","name":"Ho-Oh","eggs":["noeggs"],"g":"N"},{"id":251,"slug":"celebi","name":"Celebi","eggs":["noeggs"],"g":"N"},{"id":252,"slug":"treecko","name":"Treecko","eggs":["monster","dragon"],"g":"B"},{"id":253,"slug":"grovyle","name":"Grovyle","eggs":["monster","dragon"],"g":"B"},{"id":254,"slug":"sceptile","name":"Sceptile","eggs":["monster","dragon"],"g":"B"},{"id":255,"slug":"torchic","name":"Torchic","eggs":["field"],"g":"B"},{"id":256,"slug":"combusken","name":"Combusken","eggs":["field"],"g":"B"},{"id":257,"slug":"blaziken","name":"Blaziken","eggs":["field"],"g":"B"},{"id":258,"slug":"mudkip","name":"Mudkip","eggs":["monster","water1"],"g":"B"},{"id":259,"slug":"marshtomp","name":"Marshtomp","eggs":["monster","water1"],"g":"B"},{"id":260,"slug":"swampert","name":"Swampert","eggs":["monster","water1"],"g":"B"},{"id":261,"slug":"poochyena","name":"Poochyena","eggs":["field"],"g":"B"},{"id":262,"slug":"mightyena","name":"Mightyena","eggs":["field"],"g":"B"},{"id":263,"slug":"zigzagoon","name":"Zigzagoon","eggs":["field"],"g":"B"},{"id":264,"slug":"linoone","name":"Linoone","eggs":["field"],"g":"B"},{"id":265,"slug":"wurmple","name":"Wurmple","eggs":["bug"],"g":"B"},{"id":266,"slug":"silcoon","name":"Silcoon","eggs":["bug"],"g":"B"},{"id":267,"slug":"beautifly","name":"Beautifly","eggs":["bug"],"g":"B"},{"id":268,"slug":"cascoon","name":"Cascoon","eggs":["bug"],"g":"B"},{"id":269,"slug":"dustox","name":"Dustox","eggs":["bug"],"g":"B"},{"id":270,"slug":"lotad","name":"Lotad","eggs":["water1","grass"],"g":"B"},{"id":271,"slug":"lombre","name":"Lombre","eggs":["water1","grass"],"g":"B"},{"id":272,"slug":"ludicolo","name":"Ludicolo","eggs":["water1","grass"],"g":"B"},{"id":273,"slug":"seedot","name":"Seedot","eggs":["field","grass"],"g":"B"},{"id":274,"slug":"nuzleaf","name":"Nuzleaf","eggs":["field","grass"],"g":"B"},{"id":275,"slug":"shiftry","name":"Shiftry","eggs":["field","grass"],"g":"B"},{"id":276,"slug":"taillow","name":"Taillow","eggs":["flying"],"g":"B"},{"id":277,"slug":"swellow","name":"Swellow","eggs":["flying"],"g":"B"},{"id":278,"slug":"wingull","name":"Wingull","eggs":["water1","flying"],"g":"B"},{"id":279,"slug":"pelipper","name":"Pelipper","eggs":["water1","flying"],"g":"B"},{"id":280,"slug":"ralts","name":"Ralts","eggs":["humanlike","amorphous"],"g":"B"},{"id":281,"slug":"kirlia","name":"Kirlia","eggs":["humanlike","amorphous"],"g":"B"},{"id":282,"slug":"gardevoir","name":"Gardevoir","eggs":["humanlike","amorphous"],"g":"B"},{"id":283,"slug":"surskit","name":"Surskit","eggs":["water1","bug"],"g":"B"},{"id":284,"slug":"masquerain","name":"Masquerain","eggs":["water1","bug"],"g":"B"},{"id":285,"slug":"shroomish","name":"Shroomish","eggs":["fairy","grass"],"g":"B"},{"id":286,"slug":"breloom","name":"Breloom","eggs":["fairy","grass"],"g":"B"},{"id":287,"slug":"slakoth","name":"Slakoth","eggs":["field"],"g":"B"},{"id":288,"slug":"vigoroth","name":"Vigoroth","eggs":["field"],"g":"B"},{"id":289,"slug":"slaking","name":"Slaking","eggs":["field"],"g":"B"},{"id":290,"slug":"nincada","name":"Nincada","eggs":["bug"],"g":"B"},{"id":291,"slug":"ninjask","name":"Ninjask","eggs":["bug"],"g":"B"},{"id":292,"slug":"shedinja","name":"Shedinja","eggs":["mineral"],"g":"N"},{"id":293,"slug":"whismur","name":"Whismur","eggs":["monster","field"],"g":"B"},{"id":294,"slug":"loudred","name":"Loudred","eggs":["monster","field"],"g":"B"},{"id":295,"slug":"exploud","name":"Exploud","eggs":["monster","field"],"g":"B"},{"id":296,"slug":"makuhita","name":"Makuhita","eggs":["humanlike"],"g":"B"},{"id":297,"slug":"hariyama","name":"Hariyama","eggs":["humanlike"],"g":"B"},{"id":298,"slug":"azurill","name":"Azurill","eggs":["noeggs"],"g":"B"},{"id":299,"slug":"nosepass","name":"Nosepass","eggs":["mineral"],"g":"B"},{"id":300,"slug":"skitty","name":"Skitty","eggs":["field","fairy"],"g":"B"},{"id":301,"slug":"delcatty","name":"Delcatty","eggs":["field","fairy"],"g":"B"},{"id":302,"slug":"sableye","name":"Sableye","eggs":["humanlike"],"g":"B"},{"id":303,"slug":"mawile","name":"Mawile","eggs":["field","fairy"],"g":"B"},{"id":304,"slug":"aron","name":"Aron","eggs":["monster"],"g":"B"},{"id":305,"slug":"lairon","name":"Lairon","eggs":["monster"],"g":"B"},{"id":306,"slug":"aggron","name":"Aggron","eggs":["monster"],"g":"B"},{"id":307,"slug":"meditite","name":"Meditite","eggs":["humanlike"],"g":"B"},{"id":308,"slug":"medicham","name":"Medicham","eggs":["humanlike"],"g":"B"},{"id":309,"slug":"electrike","name":"Electrike","eggs":["field"],"g":"B"},{"id":310,"slug":"manectric","name":"Manectric","eggs":["field"],"g":"B"},{"id":311,"slug":"plusle","name":"Plusle","eggs":["fairy"],"g":"B"},{"id":312,"slug":"minun","name":"Minun","eggs":["fairy"],"g":"B"},{"id":313,"slug":"volbeat","name":"Volbeat","eggs":["bug","humanlike"],"g":"M"},{"id":314,"slug":"illumise","name":"Illumise","eggs":["bug","humanlike"],"g":"F"},{"id":315,"slug":"roselia","name":"Roselia","eggs":["fairy","grass"],"g":"B"},{"id":316,"slug":"gulpin","name":"Gulpin","eggs":["amorphous"],"g":"B"},{"id":317,"slug":"swalot","name":"Swalot","eggs":["amorphous"],"g":"B"},{"id":318,"slug":"carvanha","name":"Carvanha","eggs":["water2"],"g":"B"},{"id":319,"slug":"sharpedo","name":"Sharpedo","eggs":["water2"],"g":"B"},{"id":320,"slug":"wailmer","name":"Wailmer","eggs":["field","water2"],"g":"B"},{"id":321,"slug":"wailord","name":"Wailord","eggs":["field","water2"],"g":"B"},{"id":322,"slug":"numel","name":"Numel","eggs":["field"],"g":"B"},{"id":323,"slug":"camerupt","name":"Camerupt","eggs":["field"],"g":"B"},{"id":324,"slug":"torkoal","name":"Torkoal","eggs":["field"],"g":"B"},{"id":325,"slug":"spoink","name":"Spoink","eggs":["field"],"g":"B"},{"id":326,"slug":"grumpig","name":"Grumpig","eggs":["field"],"g":"B"},{"id":327,"slug":"spinda","name":"Spinda","eggs":["field","humanlike"],"g":"B"},{"id":328,"slug":"trapinch","name":"Trapinch","eggs":["bug","dragon"],"g":"B"},{"id":329,"slug":"vibrava","name":"Vibrava","eggs":["bug","dragon"],"g":"B"},{"id":330,"slug":"flygon","name":"Flygon","eggs":["bug","dragon"],"g":"B"},{"id":331,"slug":"cacnea","name":"Cacnea","eggs":["grass","humanlike"],"g":"B"},{"id":332,"slug":"cacturne","name":"Cacturne","eggs":["grass","humanlike"],"g":"B"},{"id":333,"slug":"swablu","name":"Swablu","eggs":["flying","dragon"],"g":"B"},{"id":334,"slug":"altaria","name":"Altaria","eggs":["flying","dragon"],"g":"B"},{"id":335,"slug":"zangoose","name":"Zangoose","eggs":["field"],"g":"B"},{"id":336,"slug":"seviper","name":"Seviper","eggs":["field","dragon"],"g":"B"},{"id":337,"slug":"lunatone","name":"Lunatone","eggs":["mineral"],"g":"N"},{"id":338,"slug":"solrock","name":"Solrock","eggs":["mineral"],"g":"N"},{"id":339,"slug":"barboach","name":"Barboach","eggs":["water2"],"g":"B"},{"id":340,"slug":"whiscash","name":"Whiscash","eggs":["water2"],"g":"B"},{"id":341,"slug":"corphish","name":"Corphish","eggs":["water1","water3"],"g":"B"},{"id":342,"slug":"crawdaunt","name":"Crawdaunt","eggs":["water1","water3"],"g":"B"},{"id":343,"slug":"baltoy","name":"Baltoy","eggs":["mineral"],"g":"N"},{"id":344,"slug":"claydol","name":"Claydol","eggs":["mineral"],"g":"N"},{"id":345,"slug":"lileep","name":"Lileep","eggs":["water3"],"g":"B"},{"id":346,"slug":"cradily","name":"Cradily","eggs":["water3"],"g":"B"},{"id":347,"slug":"anorith","name":"Anorith","eggs":["water3"],"g":"B"},{"id":348,"slug":"armaldo","name":"Armaldo","eggs":["water3"],"g":"B"},{"id":349,"slug":"feebas","name":"Feebas","eggs":["water1","dragon"],"g":"B"},{"id":350,"slug":"milotic","name":"Milotic","eggs":["water1","dragon"],"g":"B"},{"id":351,"slug":"castform","name":"Castform","eggs":["fairy","amorphous"],"g":"B"},{"id":352,"slug":"kecleon","name":"Kecleon","eggs":["field"],"g":"B"},{"id":353,"slug":"shuppet","name":"Shuppet","eggs":["amorphous"],"g":"B"},{"id":354,"slug":"banette","name":"Banette","eggs":["amorphous"],"g":"B"},{"id":355,"slug":"duskull","name":"Duskull","eggs":["amorphous"],"g":"B"},{"id":356,"slug":"dusclops","name":"Dusclops","eggs":["amorphous"],"g":"B"},{"id":357,"slug":"tropius","name":"Tropius","eggs":["monster","grass"],"g":"B"},{"id":358,"slug":"chimecho","name":"Chimecho","eggs":["amorphous"],"g":"B"},{"id":359,"slug":"absol","name":"Absol","eggs":["field"],"g":"B"},{"id":360,"slug":"wynaut","name":"Wynaut","eggs":["noeggs"],"g":"B"},{"id":361,"slug":"snorunt","name":"Snorunt","eggs":["fairy","mineral"],"g":"B"},{"id":362,"slug":"glalie","name":"Glalie","eggs":["fairy","mineral"],"g":"B"},{"id":363,"slug":"spheal","name":"Spheal","eggs":["water1","field"],"g":"B"},{"id":364,"slug":"sealeo","name":"Sealeo","eggs":["water1","field"],"g":"B"},{"id":365,"slug":"walrein","name":"Walrein","eggs":["water1","field"],"g":"B"},{"id":366,"slug":"clamperl","name":"Clamperl","eggs":["water1"],"g":"B"},{"id":367,"slug":"huntail","name":"Huntail","eggs":["water1"],"g":"B"},{"id":368,"slug":"gorebyss","name":"Gorebyss","eggs":["water1"],"g":"B"},{"id":369,"slug":"relicanth","name":"Relicanth","eggs":["water1","water2"],"g":"B"},{"id":370,"slug":"luvdisc","name":"Luvdisc","eggs":["water2"],"g":"B"},{"id":371,"slug":"bagon","name":"Bagon","eggs":["dragon"],"g":"B"},{"id":372,"slug":"shelgon","name":"Shelgon","eggs":["dragon"],"g":"B"},{"id":373,"slug":"salamence","name":"Salamence","eggs":["dragon"],"g":"B"},{"id":374,"slug":"beldum","name":"Beldum","eggs":["mineral"],"g":"N"},{"id":375,"slug":"metang","name":"Metang","eggs":["mineral"],"g":"N"},{"id":376,"slug":"metagross","name":"Metagross","eggs":["mineral"],"g":"N"},{"id":377,"slug":"regirock","name":"Regirock","eggs":["noeggs"],"g":"N"},{"id":378,"slug":"regice","name":"Regice","eggs":["noeggs"],"g":"N"},{"id":379,"slug":"registeel","name":"Registeel","eggs":["noeggs"],"g":"N"},{"id":380,"slug":"latias","name":"Latias","eggs":["noeggs"],"g":"F"},{"id":381,"slug":"latios","name":"Latios","eggs":["noeggs"],"g":"M"},{"id":382,"slug":"kyogre","name":"Kyogre","eggs":["noeggs"],"g":"N"},{"id":383,"slug":"groudon","name":"Groudon","eggs":["noeggs"],"g":"N"},{"id":384,"slug":"rayquaza","name":"Rayquaza","eggs":["noeggs"],"g":"N"},{"id":385,"slug":"jirachi","name":"Jirachi","eggs":["noeggs"],"g":"N"},{"id":386,"slug":"deoxys","name":"Deoxys","eggs":["noeggs"],"g":"N"}];
+const EGGNAME = {monster:"Monstruo",water1:"Agua 1",bug:"Bicho",flying:"Volador",field:"Campo",
+ fairy:"Hada",grass:"Planta",humanlike:"Humanoide",water3:"Agua 3",mineral:"Mineral",
+ amorphous:"Amorfo",water2:"Agua 2",ditto:"Ditto",dragon:"Dragon",noeggs:"Desconocido"};
+const STAT = ["PS","Ataque","Defensa","At.Esp","Def.Esp","Velocidad"];
+const ITEM = ["Peso Fuerza","Brazal Fuerza","Cinto Fuerza","Lente Fuerza","Banda Fuerza","Tobillera Fuerza"];
+const BABY = {25:"Pichu",35:"Cleffa",39:"Igglybuff",176:"Togepi",124:"Smoochum",125:"Elekid",
+ 126:"Magby",183:"Azurill",202:"Wynaut",106:"Tyrogue",107:"Tyrogue",237:"Tyrogue"};
+const byId = {}, bySlug = {};
+DEX.forEach(p=>{byId[p.id]=p; bySlug[p.slug]=p;});
+
+function canBreedSpecies(a,b){
+  if(a.eggs.includes("noeggs")||b.eggs.includes("noeggs")) return false;
+  if(a.eggs.includes("ditto")||b.eggs.includes("ditto")) return true;
+  return a.eggs.some(e=>b.eggs.includes(e));
+}
+function sexOk(a,b){
+  if(a.id===132||b.id===132) return a.id!==b.id;
+  if(a.g==="N"||b.g==="N") return false;
+  return true;
+}
+// devuelve {ok, motivo, cria}
+function checkPair(mom,dad){
+  const A=byId[mom.sid], B=byId[dad.sid];
+  if(A.eggs.includes("noeggs")) return {ok:false,m:A.name+" no puede criar (grupo Desconocido)"};
+  if(B.eggs.includes("noeggs")) return {ok:false,m:B.name+" no puede criar (grupo Desconocido)"};
+  const dittoA=A.id===132, dittoB=B.id===132;
+  if(dittoA&&dittoB) return {ok:false,m:"Dos Ditto no crian"};
+  if(!dittoA&&!dittoB){
+    if(!A.eggs.some(e=>B.eggs.includes(e))) return {ok:false,m:"No comparten grupo de huevo"};
+    if(A.g==="N"||B.g==="N") return {ok:false,m:"Un Pokemon sin sexo solo cria con Ditto"};
+    if(mom.sex===dad.sex) return {ok:false,m:"Necesitas un macho y una hembra"};
+  }
+  let base = dittoA? B : (dittoB? A : (mom.sex==="F"? A : B));
+  let cria = BABY[base.id] || base.name;
+  return {ok:true, cria:cria, baseName:base.name};
+}
+function pIV(a,b){ // prob de que un IV heredado sea 31
+  const x=a===31, y=b===31;
+  return (x&&y)?1:((x||y)?0.5:0);
+}
+// Lazo Destino en un padre + objeto de poder (stat s) en el otro padre P (0=mom,1=dad)
+// P(cria 6x31). Devuelve numero 0..1
+function prob6(momIV,dadIV,holder,s){
+  const src = holder===0? momIV : dadIV;
+  if(src[s]!==31) return 0;              // el objeto fija un IV que no es 31
+  const rest=[0,1,2,3,4,5].filter(i=>i!==s);
+  let total=0;
+  for(const out of rest){               // 'out' = el stat que NO hereda (sale aleatorio)
+    let p=1/32;                         // aleatorio: 1 de 32 valores es 31
+    for(const i of rest){ if(i!==out) p*=pIV(momIV[i],dadIV[i]); }
+    total+=p/5;                         // 5 subconjuntos equiprobables
+  }
+  return total;
+}
+function bestPlan(momIV,dadIV){
+  let best={p:-1};
+  for(let h=0;h<2;h++) for(let s=0;s<6;s++){
+    const p=prob6(momIV,dadIV,h,s);
+    if(p>best.p) best={p,holder:h,stat:s};
+  }
+  return best;
+}
+function count31(iv){return iv.filter(v=>v===31).length;}
+</script>
+<script>
+const KEY="diosesmon_criadero_v1";
+let BOX=[];
+try{ BOX=JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ BOX=[]; }
+const save=()=>{ try{localStorage.setItem(KEY,JSON.stringify(BOX));}catch(e){} };
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// datalist
+$("dlist").innerHTML = DEX.map(p=>`<option value="${p.name}">`).join("");
+
+// tabs
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $(b.dataset.t).classList.add("on");
+  if(b.dataset.t==="pair") renderPair();
+});
+
+function findSpecies(txt){
+  if(!txt) return null;
+  const t=txt.trim().toLowerCase();
+  return DEX.find(p=>p.name.toLowerCase()===t) || DEX.find(p=>p.slug===t)
+      || DEX.find(p=>p.name.toLowerCase().startsWith(t)) || null;
+}
+function sexPill(s){return `<span class="pill ${s.toLowerCase()}">${s==="M"?"Macho":s==="F"?"Hembra":"Sin sexo"}</span>`;}
+function ivBar(iv){
+  return iv.map((v,i)=>`<span class="tag" style="${v===31?'background:#132a1a;border-color:#2b8a3e;color:#69db7c':''}">${STAT[i]} ${v}</span>`).join("");
+}
+
+let editing=null;
+$("addBtn").onclick=()=>{editing=null;$("fSpecies").value="";$("fNick").value="";$("fSex").value="M";
+  document.querySelectorAll(".ivi").forEach(i=>{i.value=0;paint(i);});$("form").classList.remove("hide");$("fSpecies").focus();};
+$("cancelBtn").onclick=()=>$("form").classList.add("hide");
+$("all31").onclick=()=>document.querySelectorAll(".ivi").forEach(i=>{i.value=31;paint(i);});
+$("all0").onclick=()=>document.querySelectorAll(".ivi").forEach(i=>{i.value=0;paint(i);});
+function paint(i){i.classList.toggle("v31",+i.value===31);i.classList.toggle("v0",+i.value===0);}
+document.querySelectorAll(".ivi").forEach(i=>{i.oninput=()=>{
+  let v=parseInt(i.value)||0; if(v>31)v=31; if(v<0)v=0; i.value=v; paint(i);};});
+
+$("fSpecies").onchange=()=>{
+  const sp=findSpecies($("fSpecies").value);
+  if(sp){ $("fSpecies").value=sp.name;
+    if(sp.g==="N"){$("fSex").value="N";} else if(sp.g==="F"){$("fSex").value="F";}
+    else if(sp.g==="M"){$("fSex").value="M";}
+  }
+};
+$("saveBtn").onclick=()=>{
+  const sp=findSpecies($("fSpecies").value);
+  if(!sp){alert("Especie no encontrada. Escribe un nombre de la lista.");return;}
+  const iv=[...document.querySelectorAll(".ivi")].map(i=>parseInt(i.value)||0);
+  let sex=$("fSex").value;
+  if(sp.g==="N")sex="N"; if(sp.g==="F")sex="F"; if(sp.g==="M")sex="M";
+  const mon={uid:editing||Date.now()+"_"+Math.random().toString(36).slice(2,7),
+    sid:sp.id,nick:$("fNick").value.trim(),sex,iv};
+  if(editing){ const k=BOX.findIndex(m=>m.uid===editing); BOX[k]=mon; }
+  else BOX.push(mon);
+  editing=null; save(); $("form").classList.add("hide"); renderBox();
+};
+function editMon(uid){
+  const m=BOX.find(x=>x.uid===uid); if(!m)return;
+  editing=uid; $("fSpecies").value=byId[m.sid].name; $("fNick").value=m.nick; $("fSex").value=m.sex;
+  document.querySelectorAll(".ivi").forEach((i,k)=>{i.value=m.iv[k];paint(i);});
+  $("form").classList.remove("hide"); window.scrollTo(0,0);
+}
+function delMon(uid){ if(!confirm("Borrar este Pokemon?"))return;
+  BOX=BOX.filter(m=>m.uid!==uid); save(); renderBox(); }
+
+function renderBox(){
+  $("boxCount").textContent = BOX.length? `(${BOX.length})` : "(vacio)";
+  if(!BOX.length){ $("boxList").innerHTML=`<div class="card muted">Aun no has anadido nada. Pulsa "+ Anadir".</div>`; return; }
+  const groups={};
+  BOX.forEach(m=>{(groups[m.sid]=groups[m.sid]||[]).push(m);});
+  let h="";
+  Object.keys(groups).sort((a,b)=>a-b).forEach(sid=>{
+    const sp=byId[sid], arr=groups[sid];
+    h+=`<div style="grid-column:1/-1;margin-top:6px"><b>${esc(sp.name)}</b>
+      <span class="muted">x${arr.length}</span>
+      ${sp.eggs.map(e=>`<span class="tag e">${EGGNAME[e]}</span>`).join("")}</div>`;
+    arr.forEach(m=>{
+      h+=`<div class="mon"><h4><span>${esc(m.nick||sp.name)}</span>${sexPill(m.sex)}</h4>
+        <div class="sp">#${sp.id} ${esc(sp.name)} &middot; <b class="${count31(m.iv)===6?'ok':''}">${count31(m.iv)}/6 perfectos</b></div>
+        <div style="margin:8px 0">${ivBar(m.iv)}</div>
+        <div class="row" style="gap:6px">
+          <button class="btn s" onclick="editMon('${m.uid}')">Editar</button>
+          <button class="btn s r" onclick="delMon('${m.uid}')">Borrar</button>
+        </div></div>`;
+    });
+  });
+  $("boxList").innerHTML=h;
+}
+$("expBtn").onclick=()=>{
+  const b=new Blob([JSON.stringify(BOX)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+  a.download="criadero.json"; a.click();
+};
+$("impBtn").onclick=()=>{
+  const i=document.createElement("input"); i.type="file"; i.accept=".json";
+  i.onchange=e=>{const f=e.target.files[0]; const r=new FileReader();
+    r.onload=()=>{try{const d=JSON.parse(r.result); if(Array.isArray(d)){BOX=d;save();renderBox();}}catch(err){alert("Archivo no valido");}};
+    r.readAsText(f);};
+  i.click();
+};
+renderBox();
+</script>
+<script>
+function monLabel(m){const sp=byId[m.sid];
+  return `${m.nick?m.nick+" - ":""}${sp.name} [${m.sex}] ${count31(m.iv)}x31`;}
+function fillSel(sel){
+  sel.innerHTML = BOX.length? BOX.map(m=>`<option value="${m.uid}">${esc(monLabel(m))}</option>`).join("")
+    : `<option value="">(caja vacia)</option>`;
+}
+function pct(p){ if(p<=0) return "0%";
+  return p>=0.01? (p*100).toFixed(2)+"%" : (p*100).toFixed(4)+"%"; }
+
+function pairCard(mom,dad){
+  const chk=checkPair(mom,dad);
+  const A=byId[mom.sid],B=byId[dad.sid];
+  if(!chk.ok) return `<div class="card"><b class="bad">No compatibles</b><div class="muted" style="margin-top:6px">${esc(chk.m)}</div></div>`;
+  const plan=bestPlan(mom.iv,dad.iv);
+  let h=`<div class="card"><b class="ok">Compatibles</b>
+   <div style="margin:8px 0">Cria: <b>${esc(chk.cria)}</b>
+   ${chk.cria!==chk.baseName?`<span class="muted">(forma bebe de ${esc(chk.baseName)})</span>`:""}</div>`;
+  if(A.id!==132&&B.id!==132)
+    h+=`<div class="muted">La especie sale siempre de la madre: ${esc(mom.sex==="F"?A.name:B.name)}.</div>`;
+  else h+=`<div class="muted">Con Ditto la cria sale de la especie del otro padre.</div>`;
+  h+=`<hr>`;
+  if(plan.p<=0){
+    h+=`<div class="warn"><b>Ningun objeto de poder sirve todavia.</b></div>
+      <div class="muted" style="margin-top:6px">Para que un objeto de poder sea util, el padre que lo lleva
+      debe tener 31 en ese stat. Sigue criando para conseguir padres con mas IV perfectos.</div>`;
+  } else {
+    const holder = plan.holder===0? mom : dad;
+    const other  = plan.holder===0? dad : mom;
+    h+=`<table>
+      <tr><th>Pokemon</th><th>Objeto</th><th>Efecto</th></tr>
+      <tr><td>${esc(monLabel(holder))}</td><td><b class="warn">${ITEM[plan.stat]}</b></td>
+          <td>Asegura ${STAT[plan.stat]} = 31</td></tr>
+      <tr><td>${esc(monLabel(other))}</td><td><b class="warn">Lazo Destino</b></td>
+          <td>Pasa 4 IV mas al azar de los 2 padres</td></tr>
+      </table>
+      <hr>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div><div class="muted">Probabilidad de 6x31 por huevo</div><div class="big">${pct(plan.p)}</div></div>
+        <div style="text-align:right"><div class="muted">Huevos de media</div>
+        <div class="big">${Math.round(1/plan.p).toLocaleString("es")}</div></div>
+      </div>`;
+    const need=[0,1,2,3,4,5].filter(i=>mom.iv[i]!==31&&dad.iv[i]!==31);
+    if(need.length) h+=`<hr><div class="muted">Ningun padre tiene 31 en: <b class="bad">${need.map(i=>STAT[i]).join(", ")}</b>.
+      Ese IV solo puede salir por suerte (1/32). Consigue un padre con esos IV para disparar la probabilidad.</div>`;
+  }
+  return h+`</div>`;
+}
+function renderPair(){
+  fillSel($("pMom")); fillSel($("pDad"));
+  if(BOX.length>1 && $("pDad").selectedIndex===0) $("pDad").selectedIndex=1;
+  updPair(); renderBest();
+}
+function updPair(){
+  const a=BOX.find(m=>m.uid===$("pMom").value), b=BOX.find(m=>m.uid===$("pDad").value);
+  $("pairOut").innerHTML = (a&&b)? (a.uid===b.uid? `<div class="card muted">Elige dos Pokemon distintos.</div>` : pairCard(a,b))
+    : `<div class="card muted">Anade Pokemon en "Mi Caja" para empezar.</div>`;
+}
+$("pMom").onchange=updPair; $("pDad").onchange=updPair;
+
+function renderBest(){
+  const res=[];
+  for(let i=0;i<BOX.length;i++) for(let j=i+1;j<BOX.length;j++){
+    const a=BOX[i],b=BOX[j];
+    const c=checkPair(a,b); if(!c.ok) continue;
+    const p=bestPlan(a.iv,b.iv);
+    res.push({a,b,p:p.p,plan:p,cria:c.cria});
+  }
+  res.sort((x,y)=>y.p-x.p);
+  if(!res.length){ $("bestOut").innerHTML=`<div class="muted">No hay parejas compatibles en tu caja todavia.</div>`; return; }
+  $("bestOut").innerHTML=`<table><tr><th>Pareja</th><th>Cria</th><th>Objeto de poder</th><th>6x31</th></tr>`+
+   res.slice(0,25).map(r=>{
+     const holder=r.plan.holder===0?r.a:r.b;
+     const obj = r.p>0? `${ITEM[r.plan.stat]} en ${esc(byId[holder.sid].name)}` : "-";
+     return `<tr><td>${esc(monLabel(r.a))}<br>${esc(monLabel(r.b))}</td><td>${esc(r.cria)}</td>
+       <td>${obj}</td><td class="${r.p>0?'ok':'muted'}"><b>${pct(r.p)}</b></td></tr>`;
+   }).join("")+`</table>`;
+}
+</script>
+<script>
+function compatList(sp){
+  if(sp.eggs.includes("noeggs")) return [];
+  if(sp.id===132) return DEX.filter(p=>!p.eggs.includes("noeggs")&&p.id!==132);
+  return DEX.filter(p=>{
+    if(p.eggs.includes("noeggs")) return false;
+    if(p.id===132) return true;
+    if(!p.eggs.some(e=>sp.eggs.includes(e))) return false;
+    if(sp.g==="N"||p.g==="N") return false;
+    if(sp.g==="M"&&p.g==="M") return false;
+    if(sp.g==="F"&&p.g==="F") return false;
+    return true;
+  });
+}
+const GTXT={B:"Macho y hembra",M:"Solo machos",F:"Solo hembras",N:"Sin sexo (solo Ditto)"};
+$("dSearch").oninput=()=>{
+  const sp=findSpecies($("dSearch").value);
+  if(!sp){$("dexOut").innerHTML="";return;}
+  const list=compatList(sp);
+  let h=`<div class="card"><h4 style="font-size:18px">#${sp.id} ${esc(sp.name)}</h4>
+   <div style="margin:8px 0">${sp.eggs.map(e=>`<span class="tag e">${EGGNAME[e]}</span>`).join("")}</div>
+   <div class="muted">Sexo: ${GTXT[sp.g]}</div>`;
+  if(BABY[sp.id]) h+=`<div class="muted">Al criar sale <b>${BABY[sp.id]}</b> (forma bebe).</div>`;
+  if(sp.eggs.includes("noeggs")) h+=`<div class="bad" style="margin-top:8px">Este Pokemon no puede criar.</div>`;
+  h+=`</div>`;
+  if(list.length){
+    h+=`<div class="card"><b>Puede cruzarse con ${list.length} especies</b>
+     <div class="muted" style="margin:6px 0 10px">Recuerda: la cria sale de la especie de la <b>madre</b>.</div>
+     <div class="list">${list.map(p=>`<span class="tag">${esc(p.name)}</span>`).join("")}</div></div>`;
+  }
+  $("dexOut").innerHTML=h;
+};
+const EGGORDER=["monster","water1","water2","water3","bug","flying","field","fairy","grass",
+ "humanlike","mineral","amorphous","dragon","ditto","noeggs"];
+$("eSel").innerHTML=EGGORDER.map(k=>`<option value="${k}">${EGGNAME[k]}</option>`).join("");
+$("eSel").onchange=()=>{
+  const k=$("eSel").value, list=DEX.filter(p=>p.eggs.includes(k));
+  $("eggOut").innerHTML=`<div class="card"><b>${EGGNAME[k]}</b> <span class="muted">${list.length} especies (Gen 1-3)</span>
+   <div class="list" style="margin-top:10px"><table><tr><th>#</th><th>Pokemon</th><th>Otros grupos</th><th>Sexo</th></tr>`+
+   list.map(p=>`<tr><td>${p.id}</td><td>${esc(p.name)}</td>
+     <td>${p.eggs.filter(e=>e!==k).map(e=>`<span class="tag e">${EGGNAME[e]}</span>`).join("")||"-"}</td>
+     <td class="muted">${GTXT[p.g]}</td></tr>`).join("")+`</table></div></div>`;
+};
+$("eSel").onchange();
+
+$("help").innerHTML=`<div class="card">
+<h4 style="font-size:17px;margin-bottom:8px">Reglas que usa esta pagina</h4>
+<p style="margin-bottom:10px"><b>Un objeto por Pokemon.</b> Lo normal es Lazo Destino en uno y objeto de poder en el otro.</p>
+<p style="margin-bottom:10px"><b>Lazo Destino:</b> la cria hereda <b>5</b> de los 6 IV de los padres (al azar entre los 12 valores). El IV numero 6 sale aleatorio: solo 1 de cada 32 veces es 31.</p>
+<p style="margin-bottom:10px"><b>Objeto de poder:</b> fija ese stat concreto desde el padre que lo lleva, y cuenta como uno de los 5 que pasa el Lazo. Por eso <b>siempre queda un IV al azar</b>: es normal que no te salga el 6x31 aunque todo este bien puesto.</p>
+<table><tr><th>Objeto</th><th>Stat que asegura</th></tr>
+${ITEM.map((n,i)=>`<tr><td>${n}</td><td>${STAT[i]}</td></tr>`).join("")}</table>
+<hr>
+<p style="margin-bottom:10px"><b>Especie de la cria:</b> siempre la de la <b>madre</b>. Slugma macho + Koffing hembra = Koffing.</p>
+<p style="margin-bottom:10px"><b>Ditto</b> cria con todo (menos con otro Ditto y con los del grupo Desconocido). La cria sale de la especie del otro padre.</p>
+<p><b>Grupo Desconocido:</b> legendarios, bebes, Nidorina y Nidoqueen. No crian.</p>
+</div>`;
+</script>
+<footer style="border-top:1px solid #262c42;margin-top:28px;padding:18px 0 34px">
+<div class="wrap" style="padding:0 16px">
+<p class="muted" style="font-size:12px;line-height:1.7">
+Proyecto de fans sin animo de lucro, creado como herramienta de apoyo para el servidor Diosesmon.
+Sin afiliacion, patrocinio ni aprobacion oficial.<br>
+Pokemon es marca registrada de Nintendo, Creatures Inc. y GAME FREAK inc.
+Todos los derechos sobre la franquicia pertenecen a sus respectivos propietarios.<br>
+Datos de especies y grupos de huevo obtenidos de <a href="https://pokeapi.co" target="_blank" rel="noopener" style="color:#74c0fc">PokeAPI</a>.
+Esta pagina no incluye ningun recurso grafico ni sonoro de los juegos.
+</p>
+</div></footer>
+</body></html>
