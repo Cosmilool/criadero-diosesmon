@@ -602,20 +602,46 @@ function planCrianza(){
   pasos.total=r.eggs;
   return pasos;
 }
+function motivosSinPareja(){
+  if(BOX.length<2) return "Solo tienes "+BOX.length+" Pokemon en la caja. Para criar hacen falta <b>dos</b> compatibles: macho y hembra del mismo grupo de huevo, o cualquiera con un Ditto.";
+  const m={};
+  for(let i=0;i<BOX.length;i++) for(let j=i+1;j<BOX.length;j++){
+    const c=checkPair(BOX[i],BOX[j]); if(!c.ok) m[c.m]=(m[c.m]||0)+1;
+  }
+  const lista=Object.keys(m).sort((a,b)=>m[b]-m[a]);
+  if(!lista.length) return "";
+  let t="Ninguna pareja de tu caja puede criar. Motivos:<ul style=\"margin:8px 0 0 18px\">"+
+    lista.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+  if(m["Necesitas un macho y una hembra"])
+    t+="<div style=\"margin-top:8px\">Los tienes todos del mismo sexo. Corrige el sexo en <b>Mi Caja</b> si te equivocaste, o consigue un <b>Ditto</b>: cria con casi cualquier especie.</div>";
+  else if(m["No comparten grupo de huevo"])
+    t+="<div style=\"margin-top:8px\">Mira <b>Buscar Pokemon</b> para ver con quien es compatible cada uno. Un <b>Ditto</b> lo resuelve casi siempre.</div>";
+  return t;
+}
+function cabeceraPerfectos(){
+  const perf=BOX.filter(m=>count31(m.iv)===6);
+  if(!perf.length) return "";
+  return '<div class="card" style="border-color:#5f8a34"><b class="ok">Ya tienes '+perf.length+
+    (perf.length===1?" Pokemon con los 6 IV a 31":" Pokemon con los 6 IV a 31")+'</b>'+
+    '<div class="muted" style="margin-top:6px">'+perf.map(m=>"<b>"+esc(m.nick||byId[m.sid].name)+"</b>").join(", ")+
+    '. Si buscas otra especie o una pareja para seguir criando, el plan sigue abajo.</div></div>';
+}
 function renderPlan(){
   const el=$("planOut");
   if(!BOX.length){ el.innerHTML='<div class="card muted">Tu caja esta vacia. Anade Pokemon en <b>Mi Caja</b> y vuelve aqui.</div>'; return; }
+  const cab=cabeceraPerfectos();
   const pasos=planCrianza();
   if(!pasos.length){
-    const falta=cobertura(BOX);
-    el.innerHTML='<div class="card"><b class="bad">Con esta caja no se puede llegar al 6x31</b><div class="muted" style="margin-top:6px">'+
-      (falta.length
-        ? "Nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. La cria nunca supera al mejor de sus padres, asi que ese 31 no puede aparecer solo: necesitas conseguir un Pokemon compatible que ya lo tenga."
-        : "Tienes las 6 estadisticas cubiertas, pero no hay parejas compatibles que las junten. Prueba con un Ditto o con un Pokemon puente del mismo grupo de huevo.")+
-      '</div></div>'; return;
+    const falta=cobertura(BOX), sinPareja=motivosSinPareja();
+    let cuerpo;
+    if(sinPareja) cuerpo='<div class="card"><b class="warn">No hay ninguna pareja con la que criar</b><div class="muted" style="margin-top:6px">'+sinPareja+'</div></div>';
+    else cuerpo='<div class="card"><b class="bad">Con esta caja no se puede llegar al 6x31</b><div class="muted" style="margin-top:6px">'+
+      "Nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. La cria nunca supera al mejor de sus padres, asi que ese 31 no puede aparecer solo: necesitas conseguir un Pokemon compatible que ya lo tenga."+
+      '</div></div>';
+    el.innerHTML=cab+cuerpo; return;
   }
   const ult=pasos[pasos.length-1];
-  let h="";
+  let h=cab;
   if(!ult.final){
     const falta=cobertura(BOX);
     h+=`<div class="card"><b class="bad">El plan no llega al 6x31</b><div class="muted" style="margin-top:6px">${falta.length
