@@ -211,8 +211,25 @@ function count31(iv){return iv.filter(v=>v===31).length;}
 </script>
 <script>
 const KEY="diosesmon_criadero_v1";
+function sanitize(d){
+  if(!Array.isArray(d)) return null;
+  const ok=[]; let bad=0;
+  d.forEach(m=>{
+    if(!m||typeof m!=="object"){bad++;return;}
+    const sid=parseInt(m.sid);
+    if(!byId[sid]){bad++;return;}
+    const raw=Array.isArray(m.iv)?m.iv:[];
+    const iv=[0,1,2,3,4,5].map(k=>{const v=parseInt(raw[k]);return isNaN(v)||v<0?0:(v>31?31:v);});
+    let sex=["M","F","N"].indexOf(m.sex)>=0?m.sex:"M";
+    const g=byId[sid].g;
+    if(g!=="B") sex=g; else if(sex==="N") sex="M";
+    ok.push({uid:(typeof m.uid==="string"&&m.uid)?m.uid:Date.now()+"_"+Math.random().toString(36).slice(2,7),
+      sid:sid, nick:typeof m.nick==="string"?m.nick.slice(0,30):"", sex:sex, iv:iv});
+  });
+  return {ok:ok,bad:bad};
+}
 let BOX=[];
-try{ BOX=JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ BOX=[]; }
+try{ const r=sanitize(JSON.parse(localStorage.getItem(KEY))); BOX=r?r.ok:[]; }catch(e){ BOX=[]; }
 const save=()=>{ try{localStorage.setItem(KEY,JSON.stringify(BOX));}catch(e){} };
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -289,6 +306,7 @@ function renderBox(){
       <span class="muted">x${arr.length}</span>
       ${sp.eggs.map(e=>`<span class="tag e">${EGGNAME[e]}</span>`).join("")}</div>`;
     arr.forEach(m=>{
+      if(!byId[m.sid]) return;
       h+=`<div class="mon"><h4><span>${esc(m.nick||sp.name)}</span>${sexPill(m.sex)}</h4>
         <div class="sp">#${sp.id} ${esc(sp.name)} &middot; <b class="${count31(m.iv)===6?'ok':''}">${count31(m.iv)}/6 perfectos</b></div>
         <div style="margin:8px 0">${ivBar(m.iv)}</div>
@@ -306,10 +324,26 @@ $("expBtn").onclick=()=>{
   a.download="criadero.json"; a.click();
 };
 $("impBtn").onclick=()=>{
-  const i=document.createElement("input"); i.type="file"; i.accept=".json";
-  i.onchange=e=>{const f=e.target.files[0]; const r=new FileReader();
-    r.onload=()=>{try{const d=JSON.parse(r.result); if(Array.isArray(d)){BOX=d;save();renderBox();}}catch(err){alert("Archivo no valido");}};
-    r.readAsText(f);};
+  const i=document.createElement("input"); i.type="file"; i.accept=".json,application/json";
+  i.onchange=e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    if(f.size>2000000){alert("El archivo pesa demasiado, no parece una copia de la caja.");return;}
+    const r=new FileReader();
+    r.onerror=()=>alert("No se ha podido leer el archivo.");
+    r.onload=()=>{
+      let d;
+      try{ d=JSON.parse(r.result); }
+      catch(err){ alert("Ese archivo no es un JSON valido.\n\nUsa el que genera el boton Exportar (criadero.json)."); return; }
+      const res=sanitize(d);
+      if(!res){ alert("El archivo no tiene el formato esperado.\n\nDeberia ser una lista de Pokemon como la que crea Exportar."); return; }
+      if(!res.ok.length){ alert("No hay ningun Pokemon valido en ese archivo. Tu caja se queda como estaba."); return; }
+      if(!confirm("Se cargaran "+res.ok.length+" Pokemon"+(res.bad?" ("+res.bad+" entradas dañadas se descartan)":"")+
+        ".\n\nEsto reemplaza tu caja actual"+(BOX.length?" de "+BOX.length+" Pokemon":"")+". Continuar?")) return;
+      BOX=res.ok; save(); renderBox();
+      alert("Listo: "+res.ok.length+" Pokemon importados"+(res.bad?", "+res.bad+" descartados":"")+".");
+    };
+    r.readAsText(f);
+  };
   i.click();
 };
 renderBox();
