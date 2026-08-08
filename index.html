@@ -86,6 +86,7 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
 <div class="wrap">
 <nav>
 <button data-t="box" class="on">Mi Caja</button>
+<button data-t="best">Mejores parejas</button>
 <button data-t="pair">Emparejar</button>
 <button data-t="plan">Plan de crianza</button>
 <button data-t="dex">Buscar Pokemon</button>
@@ -127,12 +128,15 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
    </div>
   </div>
  </div>
- <div class="card">
-  <b>Mejores parejas</b>
-  <div class="muted" style="margin:6px 0 10px">Ordenadas por probabilidad de sacar un 6x31 en un huevo. Pulsa una para ver que ponerle a cada progenitor.</div>
-  <div id="bestBox" class="list"></div>
- </div>
  <div id="boxList" class="grid"></div>
+</div>
+
+<div id="best" class="panel">
+ <div class="card">
+  <b>Mejores parejas de tu caja</b>
+  <div class="muted" style="margin:6px 0 10px">Ordenadas por probabilidad de sacar un 6x31 en un huevo. Pulsa una para desplegar que objeto lleva cada progenitor y el detalle por estadistica.</div>
+  <div id="bestBox"></div>
+ </div>
 </div>
 
 <div id="pair" class="panel">
@@ -144,11 +148,6 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
   </div>
  </div>
  <div id="pairOut"></div>
- <div class="card">
-  <b>Mejores parejas de tu caja</b>
-  <div class="muted" style="margin:6px 0 10px">Pulsa una pareja para desplegar que objeto lleva cada progenitor y por que.</div>
-  <div id="bestOut" class="list"></div>
- </div>
 </div>
 
 <div id="plan" class="panel">
@@ -296,6 +295,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); $(b.dataset.t).classList.add("on");
   if(b.dataset.t==="pair") renderPair();
+  if(b.dataset.t==="best") renderBestInto($("bestBox"));
   if(b.dataset.t==="plan") refrescaPlan();
 });
 
@@ -449,12 +449,17 @@ function pairCard(mom,dad){ return `<div class="card">`+pairBody(mom,dad)+`</div
 function renderPair(){
   fillSel($("pMom")); fillSel($("pDad"));
   if(BOX.length>1 && $("pDad").selectedIndex===0) $("pDad").selectedIndex=1;
-  updPair(); renderBest();
+  updPair();
 }
 function updPair(){
   const a=BOX.find(m=>m.uid===$("pMom").value), b=BOX.find(m=>m.uid===$("pDad").value);
-  $("pairOut").innerHTML = (a&&b)? (a.uid===b.uid? `<div class="card muted">Elige dos Pokemon distintos.</div>` : pairCard(a,b))
-    : `<div class="card muted">Anade Pokemon en "Mi Caja" para empezar.</div>`;
+  const el=$("pairOut");
+  if(!(a&&b)){ el.innerHTML='<div class="card muted">Anade Pokemon en "Mi Caja" para empezar.</div>'; return; }
+  if(a.uid===b.uid){ el.innerHTML='<div class="card muted">Elige dos Pokemon distintos.</div>'; return; }
+  const c=checkPair(a,b), pl=bestPlan(a.iv,b.iv);
+  const r={a:a,b:b,plan:pl,p:c.ok?pl.p:0,cria:c.ok?c.cria:null,motivo:c.ok?null:c.m};
+  el.innerHTML='<div class="card">'+parHTML(r,0)+'</div>';
+  activaPar(el,[r]);
 }
 $("pMom").onchange=updPair; $("pDad").onchange=updPair;
 
@@ -477,26 +482,25 @@ function resumenObjetos(r){
   if(r.plan.fd!==null) partes.push(ITEM[r.plan.fd]+" en "+(r.b.nick||byId[r.b.sid].name));
   return partes.length? partes.join("  +  ") : "Sin objetos: ya salen solos";
 }
-function renderBestInto(el){
-  if(!el) return;
-  const res=bestPairs();
-  if(!res.length){ el.innerHTML='<div class="muted">Aun no hay parejas compatibles en tu caja.</div>'; return; }
-  el.innerHTML=res.slice(0,30).map(function(r,k){
-    const na=esc(r.a.nick||byId[r.a.sid].name), nb=esc(r.b.nick||byId[r.b.sid].name);
-    return `<div class="par" data-k="${k}">
+function parHTML(r,k){
+  const na=esc(r.a.nick||byId[r.a.sid].name), nb=esc(r.b.nick||byId[r.b.sid].name);
+  const sub = r.motivo? '<span class="bad">'+esc(r.motivo)+'</span>' : esc(resumenObjetos(r));
+  return `<div class="par" data-k="${k}">
       <div class="parhead">
         <div>
-          <div><b>${na}</b> <span class="muted">+</span> <b>${nb}</b> <span class="muted">&rarr; ${esc(r.cria)}</span></div>
-          <div class="muted" style="font-size:12px;margin-top:3px">${esc(resumenObjetos(r))}</div>
+          <div><b>${na}</b> <span class="muted">+</span> <b>${nb}</b>${r.cria?` <span class="muted">&rarr; ${esc(r.cria)}</span>`:""}</div>
+          <div class="muted" style="font-size:12px;margin-top:3px">${sub}</div>
         </div>
         <div style="text-align:right;white-space:nowrap">
-          <div class="${r.p>0?'ok':'muted'}" style="font-size:15px"><b>${pct(r.p)}</b></div>
+          <div class="${r.p>0?'ok':'muted'}" style="font-size:15px"><b>${r.motivo?"-":pct(r.p)}</b></div>
           <div class="arw">ver detalle</div>
         </div>
       </div>
       <div class="pardet"></div>
-    </div>`;}).join("");
-  el.querySelectorAll(".par").forEach(function(node){
+    </div>`;
+}
+function activaPar(cont,res){
+  cont.querySelectorAll(".par").forEach(function(node){
     node.querySelector(".parhead").onclick=function(){
       const abierto=node.classList.contains("open");
       if(!abierto){ const r=res[+node.dataset.k];
@@ -506,110 +510,15 @@ function renderBestInto(el){
     };
   });
 }
-function opuesto(s){ return s==="M"?"F":(s==="F"?"M":"N"); }
-function mejorPareja(pool){
-  let tope=0; pool.forEach(m=>{ tope=Math.max(tope,count31(m.iv)); });
-  const meta=Math.min(6,tope+1);
-  let best=null;
-  for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
-    const a=pool[i],b=pool[j], c=checkPair(a,b); if(!c.ok) continue;
-    const pl=bestPlan(a.iv,b.iv);
-    const cand={a:a,b:b,pl:pl,cria:c.cria,p6:pl.p,meta:meta,pMejora:alMenos(pl.ps,meta)};
-    if(!best){best=cand;continue;}
-    if(cand.p6>0||best.p6>0){ if(cand.p6>best.p6) best=cand; }
-    else if(cand.pMejora>best.pMejora) best=cand;
-  }
-  return best;
+function renderBestInto(el){
+  if(!el) return;
+  const res=bestPairs();
+  if(!res.length){ el.innerHTML='<div class="muted">Aun no hay parejas compatibles en tu caja.</div>'; return; }
+  const top=res.slice(0,30);
+  el.innerHTML=top.map(parHTML).join("");
+  activaPar(el,top);
 }
-function cobertura(pool){
-  return [0,1,2,3,4,5].filter(i=>!pool.some(m=>m.iv[i]===31));
-}
-function planCrianza(targetSid){
-  let pool=BOX.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick,virtual:false}));
-  const pasos=[];
-  for(let s=0;s<6;s++){
-    const b=mejorPareja(pool); if(!b) break;
-    if(b.p6>0){ pasos.push({p:b,final:true}); break; }
-    if(b.pMejora<=0) break;
-    const orden=[0,1,2,3,4,5].slice().sort((x,y)=>b.pl.ps[y]-b.pl.ps[x]).slice(0,b.meta);
-    const iv=[0,1,2,3,4,5].map(i=> orden.indexOf(i)>=0?31:Math.max(b.a.iv[i],b.b.iv[i]));
-    const madre = b.a.sex==="F"? b.a : b.b;
-    const hijo={sid:madre.sid===132?(b.a.sid===132?b.b.sid:b.a.sid):madre.sid,
-                sex:"?",iv:iv,nick:"Cria del paso "+(s+1),virtual:true};
-    pasos.push({p:b,final:false,hijo:hijo});
-    pool=pool.filter(x=>x!==b.a&&x!==b.b); pool.push(b.a,b.b,hijo);
-  }
-  // decidir el sexo de cada cria segun con quien se cruza despues
-  pasos.forEach(function(pa,k){
-    if(pa.final||!pa.hijo) return;
-    let sig=null;
-    for(let n=k+1;n<pasos.length;n++){ const q=pasos[n].p;
-      if(q.a===pa.hijo){sig=q.b;break;} if(q.b===pa.hijo){sig=q.a;break;} }
-    pa.sexo = sig? (sig.sex==="N"?"cualquiera":opuesto(sig.sex)) : "cualquiera";
-    pa.sigPareja = sig;
-  });
-  return pasos;
-}
-function renderPlan(){
-  const sid=+$("plTarget").value;
-  const pasos=planCrianza(sid), el=$("planOut");
-  if(!pasos.length){
-    const falta=cobertura(BOX);
-    el.innerHTML='<div class="card"><b class="bad">Con esta caja no se puede llegar al 6x31</b><div class="muted" style="margin-top:6px">'+
-      (falta.length
-        ? "Nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. La cria nunca supera al mejor de sus padres, asi que ese 31 no puede aparecer solo: necesitas conseguir un Pokemon compatible que ya lo tenga."
-        : "Tienes las 6 estadisticas cubiertas, pero no hay parejas compatibles que las junten. Prueba con un Ditto o con un Pokemon del mismo grupo de huevo que sirva de puente.")+
-      '</div></div>'; return; }
-  const ult=pasos[pasos.length-1];
-  let h="";
-  if(!ult.final){
-    const falta=cobertura(BOX);
-    h+=`<div class="card"><b class="bad">El plan no llega al 6x31</b>
-      <div class="muted" style="margin-top:6px">${falta.length
-        ? "En tu caja nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. Como la cria nunca supera al mejor de sus padres, ese 31 no puede aparecer de la nada: necesitas capturar o conseguir un Pokemon compatible que ya lo tenga."
-        : "Tienes cubiertas las 6 estadisticas, pero no hay una cadena de cruces compatible que las junte. Suele arreglarse metiendo un Ditto o un Pokemon puente del mismo grupo de huevo."}</div></div>`;
-  }
-  h+=`<div class="card" style="border-color:#7a4423"><b class="warn">Como usar el plan</b>
-    <div class="muted" style="margin-top:6px">El <b>paso 1</b> usa los IV reales de tu caja: es el que tienes que hacer ahora.
-    Los pasos siguientes son una <b>proyeccion</b> que asume una cria media.
-    En cuanto saques la cria, anadela en <b>Mi Caja</b> con sus IV de verdad y el plan se recalcula solo con esos datos.</div></div>`;
-  h+=pasos.map(function(pa,k){
-    const b=pa.p, na=esc(b.a.nick||byId[b.a.sid].name), nb=esc(b.b.nick||byId[b.b.sid].name);
-    const eggs = pa.final? (b.p6>=1?1:Math.round(1/b.p6)) : (pa.p&&b.pMejora>0?Math.round(1/b.pMejora):null);
-    let c=`<div class="card"${k>0?' style="opacity:.72"':''}><div class="row" style="justify-content:space-between">
-       <b>Paso ${k+1}${pa.final?' <span class="ok">- final</span>':''}${k===0?' <span class="warn">- hazlo ahora</span>':''}</b>
-       <span class="muted">${k>0?"proyeccion &middot; ":""}${pa.final?"Sale el 6x31":"Cria intermedia de "+b.meta+"x31"}</span></div>
-      <div style="margin:10px 0;font-size:15px"><b>${na}</b> <span class="muted">+</span> <b>${nb}</b>
-        <span class="muted">&rarr;</span> <b class="warn">${esc(b.cria)}</b></div>`;
-    const objs=[];
-    if(b.pl.fm!==null) objs.push(ITEM[b.pl.fm]+" en "+na);
-    if(b.pl.fd!==null) objs.push(ITEM[b.pl.fd]+" en "+nb);
-    c+=`<div class="muted">Objetos: <b class="warn">${objs.length?esc(objs.join("  +  ")):"ninguno, no hacen falta"}</b></div>`;
-    if(!pa.final) c+=`<div class="muted">Sexo a elegir para la cria: <b class="warn">${pa.sexo==="F"?"Hembra":(pa.sexo==="M"?"Macho":"cualquiera")}</b>${pa.sigPareja?' <span class="muted">(se cruzara con '+esc(pa.sigPareja.nick||byId[pa.sigPareja.sid].name)+')</span>':''}</div>`;
-    c+=`<div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:10px">
-        <div><div class="muted">${pa.final?"Probabilidad por huevo":"Probabilidad de que valga"}</div>
-          <div class="big">${pct(pa.final?b.p6:b.pMejora)}</div></div>
-        <div style="text-align:right"><div class="muted">Huevos estimados</div>
-          <div class="big">${eggs?eggs.toLocaleString("es"):"-"}</div></div></div></div>`;
-    return c;
-  }).join("");
-  const total=pasos.reduce((t,pa)=>t+(pa.final?(pa.p.p6>0?1/pa.p.p6:0):(pa.p.pMejora>0?1/pa.p.pMejora:0)),0);
-  if(ult.final) h+=`<div class="card"><b>Total estimado</b>
-    <div class="big" style="margin-top:6px">${Math.round(total).toLocaleString("es")} huevos</div>
-    <div class="muted" style="margin-top:6px">Es una estimacion: cada paso asume que crias hasta conseguir una cria util antes de pasar al siguiente.</div></div>`;
-  el.innerHTML=h;
-}
-function llenaTarget(){
-  const sel=$("plTarget"); if(!sel) return;
-  const antes=sel.value;
-  const ids=[...new Set(BOX.map(m=>m.sid))].sort((a,b)=>a-b);
-  sel.innerHTML = ids.length? ids.map(i=>`<option value="${i}">${esc(byId[i].name)}</option>`).join("")
-    : '<option value="">(caja vacia)</option>';
-  if(antes && [...sel.options].some(o=>o.value===antes)) sel.value=antes;
-}
-function refrescaPlan(){ llenaTarget(); if($("plTarget")&&$("plTarget").value) renderPlan(); }
-$("plGo").onclick=renderPlan;
-function renderBest(){ renderBestInto($("bestOut")); renderBestInto($("bestBox")); }
+function renderBest(){ renderBestInto($("bestBox")); }
 renderBox();
 </script>
 <script>
