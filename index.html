@@ -487,6 +487,7 @@ ${ITEM.map((n,i)=>`<tr><td>${n}</td><td>${STAT[i]}</td></tr>`).join("")}</table>
 </script>
 <footer style="border-top:1px solid #262c42;margin-top:28px;padding:18px 0 34px">
 <div class="wrap" style="padding:0 16px">
+<div id="visitas" style="display:none;font-size:13px;margin-bottom:14px"></div>
 <p class="muted" style="font-size:12px;line-height:1.7">
 Proyecto de fans sin animo de lucro, creado como herramienta de apoyo para el servidor Diosesmon.
 Sin afiliacion, patrocinio ni aprobacion oficial.<br>
@@ -496,4 +497,21 @@ Datos de especies y grupos de huevo obtenidos de <a href="https://pokeapi.co" ta
 Esta pagina no incluye ningun recurso grafico ni sonoro de los juegos.
 </p>
 </div></footer>
+<script>
+(function(){
+  var el=document.getElementById("visitas"); if(!el||!window.fetch) return;
+  var NS="criadero-diosesmon", K="visitantes", FLAG="diosesmon_visitado", nuevo=false;
+  try{ nuevo = !localStorage.getItem(FLAG); }catch(e){}
+  fetch("https://abacus.jasoncameron.dev/"+(nuevo?"hit":"get")+"/"+NS+"/"+K)
+   .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+   .then(function(d){
+     if(typeof d.value!=="number") throw 0;
+     if(nuevo){ try{ localStorage.setItem(FLAG,"1"); }catch(e){} }
+     el.innerHTML='<span style="color:#ffcb05;font-weight:700;font-size:16px">'+
+       d.value.toLocaleString("es")+'</span> <span class="muted">entrenadores han pasado por aqui</span>';
+     el.style.display="block";
+   })
+   .catch(function(){ el.style.display="none"; });
+})();
+</script>
 </body></html>
