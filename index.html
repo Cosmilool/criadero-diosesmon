@@ -121,12 +121,12 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
     <select id="fSex"><option value="M">Macho</option><option value="F">Hembra</option><option value="N">Sin sexo</option></select></div>
   </div>
   <div class="iv">
-   <div><label>PS</label><input class="ivi" data-i="0" value="0"><div class="ivmsg"></div></div>
-   <div><label>Ata</label><input class="ivi" data-i="1" value="0"><div class="ivmsg"></div></div>
-   <div><label>Def</label><input class="ivi" data-i="2" value="0"><div class="ivmsg"></div></div>
-   <div><label>AtEsp</label><input class="ivi" data-i="3" value="0"><div class="ivmsg"></div></div>
-   <div><label>DefEsp</label><input class="ivi" data-i="4" value="0"><div class="ivmsg"></div></div>
-   <div><label>Vel</label><input class="ivi" data-i="5" value="0"><div class="ivmsg"></div></div>
+   <div><label>PS</label><input class="ivi" data-i="0" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
+   <div><label>Ata</label><input class="ivi" data-i="1" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
+   <div><label>Def</label><input class="ivi" data-i="2" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
+   <div><label>AtEsp</label><input class="ivi" data-i="3" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
+   <div><label>DefEsp</label><input class="ivi" data-i="4" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
+   <div><label>Vel</label><input class="ivi" data-i="5" value="0" inputmode="numeric" maxlength="2" autocomplete="off"><div class="ivmsg"></div></div>
   </div>
   <div class="row" style="margin-top:10px;justify-content:space-between">
    <div class="muted">Pon 31 en los IV perfectos. Deja 0 si no lo sabes.</div>
@@ -343,8 +343,10 @@ function paint(i,mostrar){
 }
 function limpiaErrores(){ document.querySelectorAll(".ivi").forEach(i=>paint(i,false)); }
 document.querySelectorAll(".ivi").forEach(i=>{
-  i.oninput=()=>paint(i,false);
-  i.onblur=()=>paint(i,true);
+  i.onfocus=()=>{ setTimeout(()=>{ try{i.select();}catch(e){} },0); };
+  i.oninput=()=>{ const limpio=(i.value||"").replace(/[^0-9]/g,"").slice(0,2);
+    if(limpio!==i.value) i.value=limpio; paint(i,false); };
+  i.onblur=()=>{ if((i.value||"").trim()==="") i.value="0"; paint(i,true); };
 });
 
 $("fSpecies").onchange=()=>{
