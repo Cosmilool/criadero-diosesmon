@@ -532,6 +532,39 @@ function renderBestInto(el){
 }
 function opuesto(s){ return s==="M"?"F":(s==="F"?"M":"N"); }
 function cobertura(pool){ return [0,1,2,3,4,5].filter(i=>!pool.some(m=>m.iv[i]===31)); }
+function mismaCadena(a,b){
+  const A=byId[a.sid],B=byId[b.sid];
+  if(A.eggs.indexOf("noeggs")>=0||B.eggs.indexOf("noeggs")>=0) return false;
+  if(A.id===132||B.id===132) return A.id!==B.id;
+  return A.eggs.some(e=>B.eggs.indexOf(e)>=0);
+}
+function poolPara(target){
+  const dentro=BOX.filter(m=>m.sid===target||m.sid===132);
+  let cambio=true;
+  while(cambio){ cambio=false;
+    BOX.forEach(function(m){
+      if(dentro.indexOf(m)>=0) return;
+      if(dentro.some(x=>mismaCadena(x,m))){ dentro.push(m); cambio=true; }
+    });
+  }
+  return dentro.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick}));
+}
+function puedeSalirEspecie(pool,target){
+  for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
+    if(!checkPair(pool[i],pool[j]).ok) continue;
+    if(criasPosibles(pool[i],pool[j]).indexOf(target)>=0) return true;
+  }
+  return false;
+}
+function criasPosibles(a,b){
+  if(a.sid===132&&b.sid===132) return [];
+  if(a.sid===132) return [b.sid];
+  if(b.sid===132) return [a.sid];
+  const out=[];
+  if(a.sex==="F"||a.sex==="?") out.push(a.sid);
+  if(b.sex==="F"||b.sex==="?") out.push(b.sid);
+  return out;
+}
 function todasParejas(pool){
   const res=[];
   for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
@@ -541,54 +574,77 @@ function todasParejas(pool){
   }
   return res;
 }
-function criaObjetivo(c,set){
+function criaObjetivo(c,set,prefiere){
   const iv=[0,1,2,3,4,5].map(function(i){
     if(set.indexOf(i)>=0) return 31;
     return Math.round((Math.min(c.a.iv[i],c.b.iv[i])+Math.max(c.a.iv[i],c.b.iv[i]))/2);
   });
-  const madre = c.a.sex==="F"? c.a : c.b;
-  const sid = madre.sid===132? (c.a.sid===132?c.b.sid:c.a.sid) : madre.sid;
+  const pos=criasPosibles(c.a,c.b);
+  const sid = pos.indexOf(prefiere)>=0? prefiere : (pos.length?pos[0]:c.a.sid);
   return {sid:sid,sex:"?",iv:iv,nick:"Cria intermedia"};
 }
-function objetivosDe(c){
-  const seg=[0,1,2,3,4,5].filter(i=>c.pl.ps[i]===1);
-  const resto=[0,1,2,3,4,5].filter(i=>c.pl.ps[i]>0&&c.pl.ps[i]<1).sort((x,y)=>c.pl.ps[y]-c.pl.ps[x]);
-  const outs=[];
-  for(let extra=0;extra<=Math.min(3,resto.length);extra++){
-    const set=seg.concat(resto.slice(0,extra));
-    if(set.length<2||set.length>5) continue;
-    const pr=set.reduce((t,i)=>t*c.pl.ps[i],1);
-    if(pr<=0) continue;
-    outs.push({set:set,p:pr,huevos:1/pr});
-  }
-  return outs;
+function probSet(c,S){
+  let best={p:-1,fm:null,fd:null};
+  const opt=[null].concat(S);
+  opt.forEach(function(fm){ if(fm!==null&&c.a.iv[fm]!==31) return;
+    opt.forEach(function(fd){ if(fd!==null&&c.b.iv[fd]!==31) return;
+      if(fm!==null&&fd!==null&&fm===fd) return;
+      let p=1;
+      S.forEach(function(i){ p *= (i===fm||i===fd)?1:pStat(c.a.iv[i],c.b.iv[i]); });
+      if(p>best.p) best={p:p,fm:fm,fd:fd};
+    });
+  });
+  return best;
 }
-function rutaOptima(pool,prof){
+function objetivosDe(c){
+  const alc=[0,1,2,3,4,5].filter(i=>Math.max(c.a.iv[i],c.b.iv[i])===31);
+  if(alc.length<2) return [];
+  const orden=alc.slice().sort(function(x,y){ return pStat(c.a.iv[y],c.b.iv[y])-pStat(c.a.iv[x],c.b.iv[x]); });
+  const todos=[];
+  for(let k=alc.length;k>=2;k--){
+    const S=orden.slice(0,k).slice().sort(function(a,b){return a-b;});
+    const r=probSet(c,S);
+    if(r.p>0) todos.push({set:S,p:r.p,huevos:1/r.p,fm:r.fm,fd:r.fd});
+  }
+  if(!todos.length) return [];
+  const grande=todos[0];
+  let barato=todos[0];
+  todos.forEach(function(o){ if(o.huevos<barato.huevos) barato=o; });
+  return barato===grande? [grande] : [grande,barato];
+}
+function rutaOptima(pool,prof,target,limite){
+  if(limite===undefined) limite=Infinity;
   const cands=todasParejas(pool); if(!cands.length) return null;
   let mejor=null;
   cands.forEach(function(c){
-    if(c.p6>0){ const e=1/c.p6;
-      if(!mejor||e<mejor.eggs) mejor={eggs:e,pasos:[{p:c,final:true,huevos:e,set:[0,1,2,3,4,5],prob:c.p6}]}; }
+    if(c.p6>0 && criasPosibles(c.a,c.b).indexOf(target)>=0){ const e=1/c.p6;
+      if(e<limite && (!mejor||e<mejor.eggs)){ c.cria = BABY[target]||byId[target].name;
+        mejor={eggs:e,pasos:[{p:c,final:true,huevos:e,set:[0,1,2,3,4,5],prob:c.p6,fm:c.pl.fm,fd:c.pl.fd}]}; } }
   });
   if(prof<=0) return mejor;
-  const orden=cands.slice().sort(function(x,y){
-    return y.pl.ps.filter(v=>v===1).length - x.pl.ps.filter(v=>v===1).length; }).slice(0,4);
-  orden.forEach(function(c){
-    objetivosDe(c).forEach(function(o){
-      if(mejor&&o.huevos>=mejor.eggs) return;
-      const hijo=criaObjetivo(c,o.set);
-      const sub=rutaOptima(pool.concat([hijo]),prof-1);
+  const conObj=[];
+  cands.forEach(function(c){ const o=objetivosDe(c); if(o.length) conObj.push({c:c,objs:o}); });
+  conObj.sort(function(x,y){
+    return (y.objs[0].set.length - x.objs[0].set.length) || (y.objs[0].p - x.objs[0].p); });
+  conObj.slice(0,4).forEach(function(par){
+    const c=par.c;
+    par.objs.forEach(function(o){
+      const techo = mejor? Math.min(mejor.eggs,limite) : limite;
+      if(o.huevos>=techo) return;
+      const hijo=criaObjetivo(c,o.set,target);
+      const sub=rutaOptima(pool.concat([hijo]),prof-1,target,techo-o.huevos);
       if(!sub) return;
       const tot=o.huevos+sub.eggs;
-      if(!mejor||tot<mejor.eggs)
-        mejor={eggs:tot,pasos:[{p:c,final:false,hijo:hijo,huevos:o.huevos,set:o.set,prob:o.p}].concat(sub.pasos)};
+      if(tot<techo && (!mejor||tot<mejor.eggs))
+        mejor={eggs:tot,pasos:[{p:c,final:false,hijo:hijo,huevos:o.huevos,set:o.set,prob:o.p,fm:o.fm,fd:o.fd}].concat(sub.pasos)};
     });
   });
   return mejor;
 }
-function planCrianza(){
-  const pool=BOX.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick}));
-  const r=rutaOptima(pool,2);
+const PROF=4;
+function planCrianza(target){
+  const pool=poolPara(target);
+  const r=rutaOptima(pool,PROF,target);
   if(!r) return [];
   const pasos=r.pasos;
   pasos.forEach(function(pa,k){
@@ -602,12 +658,14 @@ function planCrianza(){
   pasos.total=r.eggs;
   return pasos;
 }
-function motivosSinPareja(){
-  if(BOX.length<2) return "Solo tienes "+BOX.length+" Pokemon en la caja. Para criar hacen falta <b>dos</b> compatibles: macho y hembra del mismo grupo de huevo, o cualquiera con un Ditto.";
-  const m={};
-  for(let i=0;i<BOX.length;i++) for(let j=i+1;j<BOX.length;j++){
-    const c=checkPair(BOX[i],BOX[j]); if(!c.ok) m[c.m]=(m[c.m]||0)+1;
+function motivosSinPareja(pool){
+  if(pool.length<2) return "Para llegar a esta especie solo cuentas con "+pool.length+
+    " Pokemon de su cadena de crianza. Hacen falta <b>dos</b>: macho y hembra que compartan grupo de huevo, o cualquiera con un Ditto.";
+  const m={}; let validas=0;
+  for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
+    const c=checkPair(pool[i],pool[j]); if(c.ok) validas++; else m[c.m]=(m[c.m]||0)+1;
   }
+  if(validas) return "";
   const lista=Object.keys(m).sort((a,b)=>m[b]-m[a]);
   if(!lista.length) return "";
   let t="Ninguna pareja de tu caja puede criar. Motivos:<ul style=\"margin:8px 0 0 18px\">"+
@@ -629,15 +687,30 @@ function cabeceraPerfectos(){
 function renderPlan(){
   const el=$("planOut");
   if(!BOX.length){ el.innerHTML='<div class="card muted">Tu caja esta vacia. Anade Pokemon en <b>Mi Caja</b> y vuelve aqui.</div>'; return; }
+  const sid=+$("plTarget").value;
+  if(!sid){ el.innerHTML='<div class="card muted">Elige una especie arriba.</div>'; return; }
+  const nombre=esc(byId[sid].name);
   const cab=cabeceraPerfectos();
-  const pasos=planCrianza();
+  const pool=poolPara(sid);
+  const pasos=planCrianza(sid);
   if(!pasos.length){
-    const falta=cobertura(BOX), sinPareja=motivosSinPareja();
+    const falta=cobertura(pool), sinPareja=motivosSinPareja(pool);
     let cuerpo;
-    if(sinPareja) cuerpo='<div class="card"><b class="warn">No hay ninguna pareja con la que criar</b><div class="muted" style="margin-top:6px">'+sinPareja+'</div></div>';
-    else cuerpo='<div class="card"><b class="bad">Con esta caja no se puede llegar al 6x31</b><div class="muted" style="margin-top:6px">'+
-      "Nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. La cria nunca supera al mejor de sus padres, asi que ese 31 no puede aparecer solo: necesitas conseguir un Pokemon compatible que ya lo tenga."+
-      '</div></div>';
+    if(sinPareja) cuerpo='<div class="card"><b class="warn">No hay pareja con la que criar '+nombre+'</b><div class="muted" style="margin-top:6px">'+sinPareja+'</div></div>';
+    else {
+      const fuera=falta.map(function(i){
+        const quien=BOX.filter(m=>m.iv[i]===31 && !pool.some(x=>x.nick===m.nick&&x.sid===m.sid));
+        return STATL[i]+(quien.length? " <span style=\"opacity:.8\">(lo tiene "+quien.map(m=>esc(m.nick||byId[m.sid].name)+" &mdash; "+esc(byId[m.sid].name))+", que no es compatible con "+nombre+")</span>":"");
+      });
+      cuerpo='<div class="card"><b class="bad">No se puede llegar a un '+nombre+' 6x31</b><div class="muted" style="margin-top:6px">'+
+       (falta.length
+        ? "En la cadena de crianza de "+nombre+" nadie tiene 31 en:<ul style=\"margin:8px 0 0 18px\"><li>"+fuera.join("</li><li>")+
+          "</li></ul><div style=\"margin-top:8px\">La cria nunca supera al mejor de sus padres, asi que necesitas un Pokemon <b>compatible con "+nombre+"</b> que ya tenga ese 31.</div>"
+        : (puedeSalirEspecie(pool,sid)
+           ? "Tienes todas las estadisticas cubiertas y parejas validas, pero juntarlas necesita mas cruces encadenados de los que puedo calcular de golpe. Haz el mejor cruce que te salga en <b>Mejores parejas</b>, apunta la cria en <b>Mi Caja</b> y vuelve aqui: con cada cria real el camino se acorta."
+           : "Ninguna pareja puede dar un "+nombre+". La especie sale siempre de la <b>madre</b>: necesitas una hembra "+nombre+", o un Ditto emparejado con un "+nombre+"."))+
+       '</div></div>';
+    }
     el.innerHTML=cab+cuerpo; return;
   }
   const ult=pasos[pasos.length-1];
@@ -661,8 +734,8 @@ function renderPlan(){
       <div style="margin:10px 0;font-size:15px"><b>${na}</b> <span class="muted">+</span> <b>${nb}</b>
         <span class="muted">&rarr;</span> <b class="warn">${esc(b.cria)}</b></div>`;
     const objs=[];
-    if(b.pl.fm!==null) objs.push(ITEM[b.pl.fm]+" en "+na);
-    if(b.pl.fd!==null) objs.push(ITEM[b.pl.fd]+" en "+nb);
+    if(pa.fm!==null&&pa.fm!==undefined) objs.push(ITEM[pa.fm]+" en "+na);
+    if(pa.fd!==null&&pa.fd!==undefined) objs.push(ITEM[pa.fd]+" en "+nb);
     c+=`<div class="muted">Objetos: <b class="warn">${objs.length?esc(objs.join("  +  ")):"ninguno, no hacen falta"}</b></div>`;
     c+=`<div class="muted" style="font-size:12px;margin-top:8px;border-left:2px solid #7a4423;padding-left:9px">
       <b>Que buscamos en esta ronda:</b> ${pa.set.length===6?"los 6 IV a 31":pa.set.length+" IV a 31 &mdash; "+pa.set.map(i=>STATL[i]).join(", ")}.
@@ -691,6 +764,8 @@ function llenaTarget(){
   if(antes && [...sel.options].some(o=>o.value===antes)) sel.value=antes;
 }
 function refrescaPlan(){ llenaTarget(); renderPlan(); }
+$("plGo").onclick=renderPlan;
+$("plTarget").onchange=renderPlan;
 function renderBest(){ renderBestInto($("bestBox")); }
 renderBox();
 </script>
