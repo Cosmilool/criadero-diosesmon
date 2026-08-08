@@ -196,7 +196,8 @@ const EGGNAME = {monster:"Monstruo",water1:"Agua 1",bug:"Bicho",flying:"Volador"
  amorphous:"Amorfo",water2:"Agua 2",ditto:"Ditto",dragon:"Dragon",noeggs:"Desconocido"};
 const STAT = ["PS","Ataque","Defensa","At.Esp","Def.Esp","Velocidad"];
 const STATL = ["PS","Ataque","Defensa","Ataque Especial","Defensa Especial","Velocidad"];
-const ITEM = ["Pesa Recia","Brazal Recio","Cinto Recio","Lente Recia","Banda Recia","Franja Recia"];
+const ITEM = ["Power Weight","Power Bracer","Power Belt","Power Lens","Power Band","Power Anklet"];
+const ITEMES = ["Pesa Recia","Brazal Recio","Cinto Recio","Lente Recia","Banda Recia","Franja Recia"];
 const BABY = {25:"Pichu",35:"Cleffa",39:"Igglybuff",176:"Togepi",124:"Smoochum",125:"Elekid",
  126:"Magby",183:"Azurill",202:"Wynaut",106:"Tyrogue",107:"Tyrogue",237:"Tyrogue"};
 const byId = {}, bySlug = {};
@@ -531,35 +532,65 @@ function renderBestInto(el){
 }
 function opuesto(s){ return s==="M"?"F":(s==="F"?"M":"N"); }
 function cobertura(pool){ return [0,1,2,3,4,5].filter(i=>!pool.some(m=>m.iv[i]===31)); }
-function mejorPareja(pool){
-  let tope=0; pool.forEach(m=>{ tope=Math.max(tope,count31(m.iv)); });
-  const meta=Math.min(6,tope+1);
-  let best=null;
+function todasParejas(pool){
+  const res=[];
   for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
     const a=pool[i],b=pool[j], c=checkPair(a,b); if(!c.ok) continue;
     const pl=bestPlan(a.iv,b.iv);
-    const cand={a:a,b:b,pl:pl,cria:c.cria,p6:pl.p,meta:meta,pMejora:alMenos(pl.ps,meta)};
-    if(!best){best=cand;continue;}
-    if(cand.p6>0||best.p6>0){ if(cand.p6>best.p6) best=cand; }
-    else if(cand.pMejora>best.pMejora) best=cand;
+    res.push({a:a,b:b,pl:pl,cria:c.cria,p6:pl.p});
   }
-  return best;
+  return res;
+}
+function criaObjetivo(c,set){
+  const iv=[0,1,2,3,4,5].map(function(i){
+    if(set.indexOf(i)>=0) return 31;
+    return Math.round((Math.min(c.a.iv[i],c.b.iv[i])+Math.max(c.a.iv[i],c.b.iv[i]))/2);
+  });
+  const madre = c.a.sex==="F"? c.a : c.b;
+  const sid = madre.sid===132? (c.a.sid===132?c.b.sid:c.a.sid) : madre.sid;
+  return {sid:sid,sex:"?",iv:iv,nick:"Cria intermedia"};
+}
+function objetivosDe(c){
+  const seg=[0,1,2,3,4,5].filter(i=>c.pl.ps[i]===1);
+  const resto=[0,1,2,3,4,5].filter(i=>c.pl.ps[i]>0&&c.pl.ps[i]<1).sort((x,y)=>c.pl.ps[y]-c.pl.ps[x]);
+  const outs=[];
+  for(let extra=0;extra<=Math.min(3,resto.length);extra++){
+    const set=seg.concat(resto.slice(0,extra));
+    if(set.length<2||set.length>5) continue;
+    const pr=set.reduce((t,i)=>t*c.pl.ps[i],1);
+    if(pr<=0) continue;
+    outs.push({set:set,p:pr,huevos:1/pr});
+  }
+  return outs;
+}
+function rutaOptima(pool,prof){
+  const cands=todasParejas(pool); if(!cands.length) return null;
+  let mejor=null;
+  cands.forEach(function(c){
+    if(c.p6>0){ const e=1/c.p6;
+      if(!mejor||e<mejor.eggs) mejor={eggs:e,pasos:[{p:c,final:true,huevos:e,set:[0,1,2,3,4,5],prob:c.p6}]}; }
+  });
+  if(prof<=0) return mejor;
+  const orden=cands.slice().sort(function(x,y){
+    return y.pl.ps.filter(v=>v===1).length - x.pl.ps.filter(v=>v===1).length; }).slice(0,4);
+  orden.forEach(function(c){
+    objetivosDe(c).forEach(function(o){
+      if(mejor&&o.huevos>=mejor.eggs) return;
+      const hijo=criaObjetivo(c,o.set);
+      const sub=rutaOptima(pool.concat([hijo]),prof-1);
+      if(!sub) return;
+      const tot=o.huevos+sub.eggs;
+      if(!mejor||tot<mejor.eggs)
+        mejor={eggs:tot,pasos:[{p:c,final:false,hijo:hijo,huevos:o.huevos,set:o.set,prob:o.p}].concat(sub.pasos)};
+    });
+  });
+  return mejor;
 }
 function planCrianza(){
-  let pool=BOX.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick}));
-  const pasos=[];
-  for(let s=0;s<6;s++){
-    const b=mejorPareja(pool); if(!b) break;
-    if(b.p6>0){ pasos.push({p:b,final:true}); break; }
-    if(b.pMejora<=0) break;
-    const orden=[0,1,2,3,4,5].slice().sort((x,y)=>b.pl.ps[y]-b.pl.ps[x]).slice(0,b.meta);
-    const iv=[0,1,2,3,4,5].map(i=> orden.indexOf(i)>=0?31:Math.max(b.a.iv[i],b.b.iv[i]));
-    const madre = b.a.sex==="F"? b.a : b.b;
-    const sid = madre.sid===132? (b.a.sid===132?b.b.sid:b.a.sid) : madre.sid;
-    const hijo={sid:sid,sex:"?",iv:iv,nick:"Cria del paso "+(s+1)};
-    pasos.push({p:b,final:false,hijo:hijo});
-    pool=pool.concat([hijo]);
-  }
+  const pool=BOX.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick}));
+  const r=rutaOptima(pool,2);
+  if(!r) return [];
+  const pasos=r.pasos;
   pasos.forEach(function(pa,k){
     if(pa.final||!pa.hijo) return;
     let sig=null;
@@ -568,6 +599,7 @@ function planCrianza(){
     pa.sexo = sig? (sig.sex==="N"||sig.sex==="?"?"cualquiera":opuesto(sig.sex)) : "cualquiera";
     pa.sigPareja = sig;
   });
+  pasos.total=r.eggs;
   return pasos;
 }
 function renderPlan(){
@@ -596,27 +628,29 @@ function renderPlan(){
     <b>Mi Caja</b> con sus IV de verdad y el plan se recalcula solo con esos datos.</div></div>`;
   h+=pasos.map(function(pa,k){
     const b=pa.p, na=esc(b.a.nick||byId[b.a.sid].name), nb=esc(b.b.nick||byId[b.b.sid].name);
-    const pr = pa.final? b.p6 : b.pMejora;
-    const eggs = pr>0? (pr>=1?1:Math.round(1/pr)) : null;
+    const eggs = Math.max(1,Math.round(pa.huevos||1));
     let c=`<div class="card"${k>0?' style="opacity:.72"':''}><div class="row" style="justify-content:space-between">
        <b>Paso ${k+1}${pa.final?' <span class="ok">- final</span>':''}${k===0?' <span class="warn">- hazlo ahora</span>':''}</b>
-       <span class="muted">${k>0?"proyeccion &middot; ":""}${pa.final?"Sale el 6x31":"Cria intermedia de "+b.meta+"x31"}</span></div>
+       <span class="muted">${k>0?"proyeccion &middot; ":""}${pa.final?"Sale el 6x31":"Cria intermedia de "+pa.set.length+"x31"}</span></div>
       <div style="margin:10px 0;font-size:15px"><b>${na}</b> <span class="muted">+</span> <b>${nb}</b>
         <span class="muted">&rarr;</span> <b class="warn">${esc(b.cria)}</b></div>`;
     const objs=[];
     if(b.pl.fm!==null) objs.push(ITEM[b.pl.fm]+" en "+na);
     if(b.pl.fd!==null) objs.push(ITEM[b.pl.fd]+" en "+nb);
     c+=`<div class="muted">Objetos: <b class="warn">${objs.length?esc(objs.join("  +  ")):"ninguno, no hacen falta"}</b></div>`;
-    if(!pa.final) c+=`<div class="muted">Sexo a elegir para la cria: <b class="warn">${pa.sexo==="F"?"Hembra":(pa.sexo==="M"?"Macho":"cualquiera")}</b>${pa.sigPareja?' <span class="muted">(se cruzara con '+esc(pa.sigPareja.nick||byId[pa.sigPareja.sid].name)+')</span>':''}</div>`;
+    c+=`<div class="muted" style="font-size:12px;margin-top:8px;border-left:2px solid #7a4423;padding-left:9px">
+      <b>Que buscamos en esta ronda:</b> ${pa.set.length===6?"los 6 IV a 31":pa.set.length+" IV a 31 &mdash; "+pa.set.map(i=>STATL[i]).join(", ")}.
+      ${pa.final?"":" El resto da igual de momento: se arregla en el paso siguiente."}</div>`;
+    if(!pa.final) c+=`<div class="muted" style="margin-top:6px">Sexo a elegir para la cria: <b class="warn">${pa.sexo==="F"?"Hembra":(pa.sexo==="M"?"Macho":"cualquiera")}</b>${pa.sigPareja?' <span class="muted">(se cruzara con '+esc(pa.sigPareja.nick||byId[pa.sigPareja.sid].name)+')</span>':''}</div>`;
     c+=`<div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:10px">
-        <div><div class="muted">${pa.final?"Probabilidad por huevo":"Probabilidad de que valga"}</div>
-          <div class="big">${pct(pr)}</div></div>
+        <div><div class="muted">Probabilidad por huevo</div>
+          <div class="big">${pct(pa.prob)}</div></div>
         <div style="text-align:right"><div class="muted">Huevos estimados</div>
           <div class="big">${eggs?eggs.toLocaleString("es"):"-"}</div></div></div></div>`;
     return c;
   }).join("");
   if(ult.final){
-    const total=pasos.reduce((t,pa)=>{const q=pa.final?pa.p.p6:pa.p.pMejora;return t+(q>0?1/q:0);},0);
+    const total=pasos.total||pasos.reduce((t,pa)=>t+(pa.huevos||1),0);
     h+=`<div class="card"><b>Total estimado</b><div class="big" style="margin-top:6px">${Math.round(total).toLocaleString("es")} huevos</div>
       <div class="muted" style="margin-top:6px">Estimacion: cada paso asume que crias hasta conseguir una cria util antes de pasar al siguiente.</div></div>`;
   }
@@ -689,8 +723,8 @@ Hay que meter en la cadena un Pokemon que ya lo tenga.</p>
 <p style="margin-bottom:10px">Por eso dos padres <b>6x31 dan siempre un 6x31</b>, sin necesidad de ningun objeto.</p>
 <p style="margin-bottom:12px"><b>Los objetos Recios</b> fijan un IV concreto al valor exacto del progenitor que lo lleva.
 Como cada Pokemon lleva un objeto, puedes asegurar <b>dos estadisticas por cruce</b>, una por progenitor.</p>
-<table><tr><th>Objeto</th><th>IV que fija</th></tr>
-${ITEM.map(function(n,i){return "<tr><td>"+n+"</td><td>"+STATL[i]+"</td></tr>";}).join("")}</table>
+<table><tr><th>Objeto (nombre en el juego)</th><th>IV que fija</th></tr>
+${ITEM.map(function(n,i){return "<tr><td><b>"+n+"</b> <span class=\"muted\" style=\"font-size:11px\">("+ITEMES[i]+")</span></td><td>"+STATL[i]+"</td></tr>";}).join("")}</table>
 <hr>
 <p style="margin-bottom:10px"><b>Estrategia:</b> pon cada Recio en el progenitor que ya tenga 31 en la estadistica que al otro le falta.
 Con dos 5x31 a los que les falta un IV distinto, eso da un 6x31 al primer huevo.</p>
