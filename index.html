@@ -197,7 +197,6 @@ const EGGNAME = {monster:"Monstruo",water1:"Agua 1",bug:"Bicho",flying:"Volador"
 const STAT = ["PS","Ataque","Defensa","At.Esp","Def.Esp","Velocidad"];
 const STATL = ["PS","Ataque","Defensa","Ataque Especial","Defensa Especial","Velocidad"];
 const ITEM = ["Pesa Recia","Brazal Recio","Cinto Recio","Lente Recia","Banda Recia","Franja Recia"];
-const KNOT = "Lazo Destino";
 const BABY = {25:"Pichu",35:"Cleffa",39:"Igglybuff",176:"Togepi",124:"Smoochum",125:"Elekid",
  126:"Magby",183:"Azurill",202:"Wynaut",106:"Tyrogue",107:"Tyrogue",237:"Tyrogue"};
 const byId = {}, bySlug = {};
@@ -694,6 +693,9 @@ ${ITEM.map(function(n,i){return "<tr><td>"+n+"</td><td>"+STATL[i]+"</td></tr>";}
 <p style="margin-bottom:10px"><b>Estrategia:</b> pon cada Recio en el progenitor que ya tenga 31 en la estadistica que al otro le falta.
 Con dos 5x31 a los que les falta un IV distinto, eso da un 6x31 al primer huevo.</p>
 <p style="margin-bottom:10px">La pestaña <b>Plan de crianza</b> encadena los cruces por ti: te dice que pareja juntar en cada paso, que objeto ponerle a cada uno, que sexo elegir para la cria y cuantos huevos hacen falta de media.</p>
+<hr>
+<p style="margin-bottom:10px"><b>Sobre el Lazo Destino:</b> en los juegos oficiales sube los IV heredados, pero aqui la herencia funciona por rango
+y dos padres 6x31 dan un 6x31 sin ningun objeto. Por eso esta pagina no lo recomienda. Si compruebas en el servidor que cambia algo, avisa y se ajusta.</p>
 <hr>
 <p style="margin-bottom:10px"><b>Especie de la cria:</b> siempre la de la <b>madre</b>. Slugma macho + Koffing hembra da Koffing.</p>
 <p style="margin-bottom:10px"><b>Ditto</b> cria con casi todo, menos con otro Ditto y con el grupo Desconocido.</p>
