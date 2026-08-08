@@ -74,8 +74,6 @@ hr{border:none;border-top:1px solid #262c42;margin:12px 0}
    <div><b>Mis Pokemon</b> <span class="muted" id="boxCount"></span></div>
    <div class="row" style="gap:6px">
     <button class="btn g" id="addBtn">+ Anadir</button>
-    <button class="btn s" id="expBtn">Exportar</button>
-    <button class="btn s" id="impBtn">Importar</button>
    </div>
   </div>
  </div>
@@ -318,34 +316,6 @@ function renderBox(){
   });
   $("boxList").innerHTML=h;
 }
-$("expBtn").onclick=()=>{
-  const b=new Blob([JSON.stringify(BOX)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-  a.download="criadero.json"; a.click();
-};
-$("impBtn").onclick=()=>{
-  const i=document.createElement("input"); i.type="file"; i.accept=".json,application/json";
-  i.onchange=e=>{
-    const f=e.target.files&&e.target.files[0]; if(!f) return;
-    if(f.size>2000000){alert("El archivo pesa demasiado, no parece una copia de la caja.");return;}
-    const r=new FileReader();
-    r.onerror=()=>alert("No se ha podido leer el archivo.");
-    r.onload=()=>{
-      let d;
-      try{ d=JSON.parse(r.result); }
-      catch(err){ alert("Ese archivo no es un JSON valido.\n\nUsa el que genera el boton Exportar (criadero.json)."); return; }
-      const res=sanitize(d);
-      if(!res){ alert("El archivo no tiene el formato esperado.\n\nDeberia ser una lista de Pokemon como la que crea Exportar."); return; }
-      if(!res.ok.length){ alert("No hay ningun Pokemon valido en ese archivo. Tu caja se queda como estaba."); return; }
-      if(!confirm("Se cargaran "+res.ok.length+" Pokemon"+(res.bad?" ("+res.bad+" entradas dañadas se descartan)":"")+
-        ".\n\nEsto reemplaza tu caja actual"+(BOX.length?" de "+BOX.length+" Pokemon":"")+". Continuar?")) return;
-      BOX=res.ok; save(); renderBox();
-      alert("Listo: "+res.ok.length+" Pokemon importados"+(res.bad?", "+res.bad+" descartados":"")+".");
-    };
-    r.readAsText(f);
-  };
-  i.click();
-};
 renderBox();
 </script>
 <script>
@@ -487,7 +457,6 @@ ${ITEM.map((n,i)=>`<tr><td>${n}</td><td>${STAT[i]}</td></tr>`).join("")}</table>
 </script>
 <footer style="border-top:1px solid #262c42;margin-top:28px;padding:18px 0 34px">
 <div class="wrap" style="padding:0 16px">
-<div id="visitas" style="display:none;font-size:13px;margin-bottom:14px"></div>
 <p class="muted" style="font-size:12px;line-height:1.7">
 Proyecto de fans sin animo de lucro, creado como herramienta de apoyo para el servidor Diosesmon.
 Sin afiliacion, patrocinio ni aprobacion oficial.<br>
@@ -497,21 +466,4 @@ Datos de especies y grupos de huevo obtenidos de <a href="https://pokeapi.co" ta
 Esta pagina no incluye ningun recurso grafico ni sonoro de los juegos.
 </p>
 </div></footer>
-<script>
-(function(){
-  var el=document.getElementById("visitas"); if(!el||!window.fetch) return;
-  var NS="criadero-diosesmon", K="visitantes", FLAG="diosesmon_visitado", nuevo=false;
-  try{ nuevo = !localStorage.getItem(FLAG); }catch(e){}
-  fetch("https://abacus.jasoncameron.dev/"+(nuevo?"hit":"get")+"/"+NS+"/"+K)
-   .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-   .then(function(d){
-     if(typeof d.value!=="number") throw 0;
-     if(nuevo){ try{ localStorage.setItem(FLAG,"1"); }catch(e){} }
-     el.innerHTML='<span style="color:#ffcb05;font-weight:700;font-size:16px">'+
-       d.value.toLocaleString("es")+'</span> <span class="muted">entrenadores han pasado por aqui</span>';
-     el.style.display="block";
-   })
-   .catch(function(){ el.style.display="none"; });
-})();
-</script>
 </body></html>
