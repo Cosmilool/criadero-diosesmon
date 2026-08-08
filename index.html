@@ -87,6 +87,7 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
 <nav>
 <button data-t="box" class="on">Mi Caja</button>
 <button data-t="pair">Emparejar</button>
+<button data-t="plan">Plan de crianza</button>
 <button data-t="dex">Buscar Pokemon</button>
 <button data-t="eggs">Grupos Huevo</button>
 <button data-t="help">Como funciona</button>
@@ -150,6 +151,16 @@ footer{border-top:1px solid #35241c;margin-top:28px;padding:18px 0 34px}
  </div>
 </div>
 
+<div id="plan" class="panel">
+ <div class="card">
+  <div class="row" style="justify-content:space-between;align-items:flex-end">
+   <div style="flex:1;min-width:200px"><label>Que especie quieres sacar 6x31</label><select id="plTarget"></select></div>
+   <button class="btn" id="plGo">Calcular plan</button>
+  </div>
+ </div>
+ <div id="planOut"></div>
+</div>
+
 <div id="dex" class="panel">
  <div class="card">
   <label>Busca un Pokemon</label>
@@ -203,42 +214,51 @@ function checkPair(mom,dad){
   if(!dittoA&&!dittoB){
     if(!A.eggs.some(e=>B.eggs.includes(e))) return {ok:false,m:"No comparten grupo de huevo"};
     if(A.g==="N"||B.g==="N") return {ok:false,m:"Un Pokemon sin sexo solo cria con Ditto"};
-    if(mom.sex===dad.sex) return {ok:false,m:"Necesitas un macho y una hembra"};
+    if(mom.sex===dad.sex && mom.sex!=="?") return {ok:false,m:"Necesitas un macho y una hembra"};
   }
   let base = dittoA? B : (dittoB? A : (mom.sex==="F"? A : B));
   let cria = BABY[base.id] || base.name;
   return {ok:true, cria:cria, baseName:base.name};
 }
-function pIV(a,b){const x=a===31,y=b===31;return (x&&y)?1:((x||y)?0.5:0);}
-function combos(arr,k){const res=[],n=arr.length;(function go(s,c){if(c.length===k){res.push(c.slice());return;}
- for(let i=s;i<n;i++){c.push(arr[i]);go(i+1,c);c.pop();}})(0,[]);return res;}
-// Cobblemon: sin objetos se heredan 3 IV; con Lazo Destino, 5.
-// El objeto de poder fuerza un IV concreto y ocupa una de esas plazas.
-function probCfg(mom,dad,knot,holder,stat){
-  const N=knot?5:3, RND=1/32;
-  const hayObj = stat!==null && stat!==undefined;
-  if(hayObj){ const src=holder===0?mom:dad; if(src[stat]!==31) return 0; }
-  const pool = hayObj? [0,1,2,3,4,5].filter(i=>i!==stat) : [0,1,2,3,4,5];
-  const need = hayObj? N-1 : N;
-  const subs=combos(pool,need); if(!subs.length) return 0;
-  let t=0;
-  subs.forEach(S=>{ let p=1; pool.forEach(i=>{ p*= S.indexOf(i)>=0? pIV(mom[i],dad[i]) : RND; }); t+=p; });
-  return t/subs.length;
+// MODELO DIOSESMON (verificado en el servidor):
+// cada IV de la cria sale al azar dentro del rango [min(padres), max(padres)].
+// Un objeto Recio fija ese IV al valor exacto del progenitor que lo lleva.
+function pStat(a,b){
+  const lo=Math.min(a,b), hi=Math.max(a,b);
+  if(hi<31) return 0;
+  return 1/(31-lo+1);
 }
-function bestOf(mom,dad,knot,usaObj){
-  if(!usaObj) return {p:probCfg(mom,dad,knot,null,null),knot:knot,holder:null,stat:null};
-  let b={p:-1,knot:knot,holder:null,stat:null};
-  for(let hh=0;hh<2;hh++) for(let s=0;s<6;s++){
-    const p=probCfg(mom,dad,knot,hh,s);
-    if(p>b.p) b={p:p,knot:knot,holder:hh,stat:s};
+function statProbs(mom,dad,fm,fd){
+  const ps=[];
+  for(let i=0;i<6;i++){
+    if(fm===i) ps.push(mom[i]===31?1:0);
+    else if(fd===i) ps.push(dad[i]===31?1:0);
+    else ps.push(pStat(mom[i],dad[i]));
   }
-  return b;
+  return ps;
+}
+function prod(ps){ let r=1; ps.forEach(x=>{r*=x;}); return r; }
+function alMenos(ps,k){ // P(al menos k estadisticas a 31)
+  let dp=[1];
+  ps.forEach(p=>{ const nd=new Array(dp.length+1).fill(0);
+    dp.forEach((v,c)=>{ nd[c]+=v*(1-p); nd[c+1]+=v*p; }); dp=nd; });
+  let t=0; for(let c=k;c<dp.length;c++) t+=dp[c]; return t;
 }
 function bestPlan(mom,dad){
-  const opts=[bestOf(mom,dad,false,false),bestOf(mom,dad,true,false),
-              bestOf(mom,dad,false,true), bestOf(mom,dad,true,true)];
-  let b=opts[0]; opts.forEach(o=>{ if(o.p>b.p) b=o; });
-  return b;
+  let best={p:-1,fm:null,fd:null};
+  const op=[null,0,1,2,3,4,5];
+  op.forEach(fm=>{ if(fm!==null&&mom[fm]!==31) return;
+    op.forEach(fd=>{ if(fd!==null&&dad[fd]!==31) return;
+      if(fm!==null&&fd!==null&&fm===fd) return;
+      const p=prod(statProbs(mom,dad,fm,fd));
+      if(p>best.p) best={p:p,fm:fm,fd:fd};
+    });
+  });
+  best.ps=statProbs(mom,dad,best.fm,best.fd);
+  return best;
+}
+function imposibles(mom,dad){
+  return [0,1,2,3,4,5].filter(i=>Math.max(mom[i],dad[i])<31);
 }
 function count31(iv){return iv.filter(v=>v===31).length;}
 </script>
@@ -276,6 +296,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); $(b.dataset.t).classList.add("on");
   if(b.dataset.t==="pair") renderPair();
+  if(b.dataset.t==="plan") refrescaPlan();
 });
 
 function findSpecies(txt){
@@ -373,6 +394,7 @@ function renderBox(){
   });
   $("boxList").innerHTML=h;
   renderBestInto($("bestBox"));
+  if(window.refrescaPlan) refrescaPlan();
 }
 
 </script>
@@ -389,45 +411,38 @@ function pct(p){ if(p<=0) return "0%";
   if(v>=0.01) return v.toFixed(3)+"%";
   return v.toFixed(5)+"%"; }
 
+function ivRango(a,b){const lo=Math.min(a,b),hi=Math.max(a,b);return lo===hi?String(lo):lo+" - "+hi;}
 function pairBody(mom,dad){
   const chk=checkPair(mom,dad);
   const A=byId[mom.sid],B=byId[dad.sid];
   if(!chk.ok) return `<b class="bad">No compatibles</b><div class="muted" style="margin-top:6px">${esc(chk.m)}</div>`;
-  const plan=bestPlan(mom.iv,dad.iv);
+  const pl=bestPlan(mom.iv,dad.iv), imp=imposibles(mom.iv,dad.iv);
   let h=`<b class="ok">Compatibles</b>
-   <div style="margin:8px 0">Cria: <b>${esc(chk.cria)}</b>${chk.cria!==chk.baseName?` <span class="muted">(forma bebe de ${esc(chk.baseName)}: necesita el incienso correspondiente)</span>`:""}</div>`;
-  if(A.id!==132&&B.id!==132) h+=`<div class="muted">La especie sale siempre de la madre: ${esc(mom.sex==="F"?A.name:B.name)}.</div>`;
-  else h+=`<div class="muted">Con Ditto la cria sale de la especie del otro progenitor.</div>`;
+   <div style="margin:8px 0">Cria: <b>${esc(chk.cria)}</b>${chk.cria!==chk.baseName?` <span class="muted">(forma bebe de ${esc(chk.baseName)}: necesita su incienso)</span>`:""}</div>`;
+  h+= (A.id!==132&&B.id!==132)
+    ? `<div class="muted">La especie sale de la madre: ${esc(mom.sex==="F"?A.name:B.name)}.</div>`
+    : `<div class="muted">Con Ditto la cria sale de la especie del otro progenitor.</div>`;
   h+=`<hr>`;
-  if(plan.p<=0){
-    h+=`<div class="warn"><b>Con esta pareja no puede salir un 6x31.</b></div>
-     <div class="muted" style="margin-top:6px">Hay estadisticas en las que ningun progenitor llega a 31. Necesitas conseguir antes un padre o una madre mejor.</div>`;
-  } else {
-    const obj=["",""], efe=["",""];
-    if(plan.stat!==null){ obj[plan.holder]=ITEM[plan.stat]; efe[plan.holder]="Asegura el IV de "+STATL[plan.stat]+" de este progenitor"; }
-    if(plan.knot){ const o = plan.stat!==null? 1-plan.holder : 0; obj[o]=KNOT; efe[o]="Sube de 3 a 5 los IV heredados"; }
-    const fila=(m,k)=>`<tr><td>${esc(monLabel(m))}</td><td>${obj[k]?'<b class="warn">'+obj[k]+'</b>':'<span class="muted">Nada</span>'}</td><td class="muted">${efe[k]||"-"}</td></tr>`;
-    h+=`<b>Que equipar a cada uno</b><table style="margin-top:8px">
-      <tr><th>Pokemon</th><th>Objeto</th><th>Efecto</th></tr>${fila(mom,0)}${fila(dad,1)}</table>`;
-    if(!plan.knot) h+=`<div class="warn" style="margin-top:10px;font-size:13px">Aqui el Lazo Destino <b>empeora</b> el resultado: obligaria a heredar 5 IV e incluiria alguno que ningun progenitor tiene a 31.</div>`;
-    if(plan.stat===null) h+=`<div class="muted" style="margin-top:10px">Ningun objeto de poder mejora nada con esta pareja: da igual cual pongas.</div>`;
-    h+=`<hr><div class="row" style="justify-content:space-between;align-items:flex-end">
-        <div><div class="muted">Probabilidad de 6x31 por huevo</div><div class="big">${pct(plan.p)}</div></div>
-        <div style="text-align:right"><div class="muted">Huevos de media</div><div class="big">${Math.round(1/plan.p).toLocaleString("es")}</div></div>
-      </div>`;
-  }
-  const comp=[["Sin ningun objeto",bestOf(mom.iv,dad.iv,false,false)],
-              ["Solo "+KNOT,bestOf(mom.iv,dad.iv,true,false)],
-              ["Solo objeto de poder",bestOf(mom.iv,dad.iv,false,true)],
-              [KNOT+" + objeto de poder",bestOf(mom.iv,dad.iv,true,true)]];
-  h+=`<hr><b>Comparativa de montajes</b><table style="margin-top:8px">
-      <tr><th>Montaje</th><th>Mejor objeto</th><th>6x31</th></tr>`+
-   comp.map(function(c){var n=c[0],o=c[1];
-     return `<tr${o.p===plan.p&&plan.p>0?' style="background:#132a1a"':''}><td>${n}</td>
-      <td class="muted">${o.stat===null?"-":ITEM[o.stat]+" en "+esc(byId[(o.holder===0?mom:dad).sid].name)}</td>
-      <td class="${o.p>0?'ok':'muted'}"><b>${pct(o.p)}</b></td></tr>`;}).join("")+`</table>`;
-  const need=[0,1,2,3,4,5].filter(i=>mom.iv[i]!==31&&dad.iv[i]!==31);
-  if(need.length) h+=`<div class="muted" style="margin-top:10px">Ningun progenitor tiene 31 en: <b class="bad">${need.map(i=>STATL[i]).join(", ")}</b>. Esos IV solo pueden salir por azar, 1 de cada 32.</div>`;
+  const obj=["",""],efe=["",""];
+  if(pl.fm!==null){obj[0]=ITEM[pl.fm];efe[0]="Fija "+STATL[pl.fm]+" = 31";}
+  if(pl.fd!==null){obj[1]=ITEM[pl.fd];efe[1]="Fija "+STATL[pl.fd]+" = 31";}
+  const fila=(m,k)=>`<tr><td>${esc(monLabel(m))}</td><td>${obj[k]?'<b class="warn">'+obj[k]+'</b>':'<span class="muted">Nada</span>'}</td><td class="muted">${efe[k]||"No hace falta"}</td></tr>`;
+  h+=`<b>Que equipar a cada uno</b><table style="margin-top:8px">
+     <tr><th>Pokemon</th><th>Objeto</th><th>Efecto</th></tr>${fila(mom,0)}${fila(dad,1)}</table>`;
+  h+=`<table style="margin-top:14px"><tr><th>Estadistica</th><th>Madre</th><th>Padre</th><th>Rango de la cria</th><th>Sale 31</th></tr>`+
+   [0,1,2,3,4,5].map(function(i){
+     const fijo=(pl.fm===i||pl.fd===i), p=pl.ps[i];
+     return `<tr><td>${STATL[i]}</td><td>${mom.iv[i]}</td><td>${dad.iv[i]}</td>
+       <td class="muted">${fijo?'<span class="ok">fijado a 31</span>':ivRango(mom.iv[i],dad.iv[i])}</td>
+       <td class="${p===1?'ok':(p>0?'warn':'bad')}"><b>${p===1?"seguro":(p>0?pct(p):"imposible")}</b></td></tr>`;
+   }).join("")+`</table>`;
+  if(imp.length) h+=`<div class="bad" style="margin-top:10px;font-size:13px"><b>Imposible con esta pareja.</b>
+    Ninguno llega a 31 en <b>${imp.map(i=>STATL[i]).join(", ")}</b>, y la cria nunca supera el mejor de los dos padres.
+    Necesitas meter en la cadena un Pokemon con 31 en ${imp.length===1?"esa":"esas"} estadistica${imp.length===1?"":"s"}.</div>`;
+  h+=`<hr><div class="row" style="justify-content:space-between;align-items:flex-end">
+      <div><div class="muted">Probabilidad de 6x31 por huevo</div><div class="big">${pct(pl.p)}</div></div>
+      <div style="text-align:right"><div class="muted">Huevos de media</div>
+      <div class="big">${pl.p>0?(pl.p>=1?"1":Math.round(1/pl.p).toLocaleString("es")):"-"}</div></div></div>`;
   return h;
 }
 function pairCard(mom,dad){ return `<div class="card">`+pairBody(mom,dad)+`</div>`; }
@@ -455,12 +470,12 @@ function bestPairs(){
   return res;
 }
 function resumenObjetos(r){
-  if(r.p<=0) return "Ninguna combinacion sirve";
+  const imp=imposibles(r.a.iv,r.b.iv);
+  if(imp.length) return "Imposible: nadie llega a 31 en "+imp.map(i=>STATL[i]).join(", ");
   const partes=[];
-  if(r.plan.stat!==null){ const hd=r.plan.holder===0?r.a:r.b;
-    partes.push(ITEM[r.plan.stat]+" en "+byId[hd.sid].name); }
-  if(r.plan.knot) partes.push(KNOT);
-  return partes.length? partes.join("  +  ") : "Sin ningun objeto";
+  if(r.plan.fm!==null) partes.push(ITEM[r.plan.fm]+" en "+(r.a.nick||byId[r.a.sid].name));
+  if(r.plan.fd!==null) partes.push(ITEM[r.plan.fd]+" en "+(r.b.nick||byId[r.b.sid].name));
+  return partes.length? partes.join("  +  ") : "Sin objetos: ya salen solos";
 }
 function renderBestInto(el){
   if(!el) return;
@@ -491,6 +506,109 @@ function renderBestInto(el){
     };
   });
 }
+function opuesto(s){ return s==="M"?"F":(s==="F"?"M":"N"); }
+function mejorPareja(pool){
+  let tope=0; pool.forEach(m=>{ tope=Math.max(tope,count31(m.iv)); });
+  const meta=Math.min(6,tope+1);
+  let best=null;
+  for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
+    const a=pool[i],b=pool[j], c=checkPair(a,b); if(!c.ok) continue;
+    const pl=bestPlan(a.iv,b.iv);
+    const cand={a:a,b:b,pl:pl,cria:c.cria,p6:pl.p,meta:meta,pMejora:alMenos(pl.ps,meta)};
+    if(!best){best=cand;continue;}
+    if(cand.p6>0||best.p6>0){ if(cand.p6>best.p6) best=cand; }
+    else if(cand.pMejora>best.pMejora) best=cand;
+  }
+  return best;
+}
+function cobertura(pool){
+  return [0,1,2,3,4,5].filter(i=>!pool.some(m=>m.iv[i]===31));
+}
+function planCrianza(targetSid){
+  let pool=BOX.map(m=>({sid:m.sid,sex:m.sex,iv:m.iv.slice(),nick:m.nick,virtual:false}));
+  const pasos=[];
+  for(let s=0;s<6;s++){
+    const b=mejorPareja(pool); if(!b) break;
+    if(b.p6>0){ pasos.push({p:b,final:true}); break; }
+    if(b.pMejora<=0) break;
+    const orden=[0,1,2,3,4,5].slice().sort((x,y)=>b.pl.ps[y]-b.pl.ps[x]).slice(0,b.meta);
+    const iv=[0,1,2,3,4,5].map(i=> orden.indexOf(i)>=0?31:Math.max(b.a.iv[i],b.b.iv[i]));
+    const madre = b.a.sex==="F"? b.a : b.b;
+    const hijo={sid:madre.sid===132?(b.a.sid===132?b.b.sid:b.a.sid):madre.sid,
+                sex:"?",iv:iv,nick:"Cria del paso "+(s+1),virtual:true};
+    pasos.push({p:b,final:false,hijo:hijo});
+    pool=pool.filter(x=>x!==b.a&&x!==b.b); pool.push(b.a,b.b,hijo);
+  }
+  // decidir el sexo de cada cria segun con quien se cruza despues
+  pasos.forEach(function(pa,k){
+    if(pa.final||!pa.hijo) return;
+    let sig=null;
+    for(let n=k+1;n<pasos.length;n++){ const q=pasos[n].p;
+      if(q.a===pa.hijo){sig=q.b;break;} if(q.b===pa.hijo){sig=q.a;break;} }
+    pa.sexo = sig? (sig.sex==="N"?"cualquiera":opuesto(sig.sex)) : "cualquiera";
+    pa.sigPareja = sig;
+  });
+  return pasos;
+}
+function renderPlan(){
+  const sid=+$("plTarget").value;
+  const pasos=planCrianza(sid), el=$("planOut");
+  if(!pasos.length){
+    const falta=cobertura(BOX);
+    el.innerHTML='<div class="card"><b class="bad">Con esta caja no se puede llegar al 6x31</b><div class="muted" style="margin-top:6px">'+
+      (falta.length
+        ? "Nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. La cria nunca supera al mejor de sus padres, asi que ese 31 no puede aparecer solo: necesitas conseguir un Pokemon compatible que ya lo tenga."
+        : "Tienes las 6 estadisticas cubiertas, pero no hay parejas compatibles que las junten. Prueba con un Ditto o con un Pokemon del mismo grupo de huevo que sirva de puente.")+
+      '</div></div>'; return; }
+  const ult=pasos[pasos.length-1];
+  let h="";
+  if(!ult.final){
+    const falta=cobertura(BOX);
+    h+=`<div class="card"><b class="bad">El plan no llega al 6x31</b>
+      <div class="muted" style="margin-top:6px">${falta.length
+        ? "En tu caja nadie tiene 31 en <b>"+falta.map(i=>STATL[i]).join(", ")+"</b>. Como la cria nunca supera al mejor de sus padres, ese 31 no puede aparecer de la nada: necesitas capturar o conseguir un Pokemon compatible que ya lo tenga."
+        : "Tienes cubiertas las 6 estadisticas, pero no hay una cadena de cruces compatible que las junte. Suele arreglarse metiendo un Ditto o un Pokemon puente del mismo grupo de huevo."}</div></div>`;
+  }
+  h+=`<div class="card" style="border-color:#7a4423"><b class="warn">Como usar el plan</b>
+    <div class="muted" style="margin-top:6px">El <b>paso 1</b> usa los IV reales de tu caja: es el que tienes que hacer ahora.
+    Los pasos siguientes son una <b>proyeccion</b> que asume una cria media.
+    En cuanto saques la cria, anadela en <b>Mi Caja</b> con sus IV de verdad y el plan se recalcula solo con esos datos.</div></div>`;
+  h+=pasos.map(function(pa,k){
+    const b=pa.p, na=esc(b.a.nick||byId[b.a.sid].name), nb=esc(b.b.nick||byId[b.b.sid].name);
+    const eggs = pa.final? (b.p6>=1?1:Math.round(1/b.p6)) : (pa.p&&b.pMejora>0?Math.round(1/b.pMejora):null);
+    let c=`<div class="card"${k>0?' style="opacity:.72"':''}><div class="row" style="justify-content:space-between">
+       <b>Paso ${k+1}${pa.final?' <span class="ok">- final</span>':''}${k===0?' <span class="warn">- hazlo ahora</span>':''}</b>
+       <span class="muted">${k>0?"proyeccion &middot; ":""}${pa.final?"Sale el 6x31":"Cria intermedia de "+b.meta+"x31"}</span></div>
+      <div style="margin:10px 0;font-size:15px"><b>${na}</b> <span class="muted">+</span> <b>${nb}</b>
+        <span class="muted">&rarr;</span> <b class="warn">${esc(b.cria)}</b></div>`;
+    const objs=[];
+    if(b.pl.fm!==null) objs.push(ITEM[b.pl.fm]+" en "+na);
+    if(b.pl.fd!==null) objs.push(ITEM[b.pl.fd]+" en "+nb);
+    c+=`<div class="muted">Objetos: <b class="warn">${objs.length?esc(objs.join("  +  ")):"ninguno, no hacen falta"}</b></div>`;
+    if(!pa.final) c+=`<div class="muted">Sexo a elegir para la cria: <b class="warn">${pa.sexo==="F"?"Hembra":(pa.sexo==="M"?"Macho":"cualquiera")}</b>${pa.sigPareja?' <span class="muted">(se cruzara con '+esc(pa.sigPareja.nick||byId[pa.sigPareja.sid].name)+')</span>':''}</div>`;
+    c+=`<div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:10px">
+        <div><div class="muted">${pa.final?"Probabilidad por huevo":"Probabilidad de que valga"}</div>
+          <div class="big">${pct(pa.final?b.p6:b.pMejora)}</div></div>
+        <div style="text-align:right"><div class="muted">Huevos estimados</div>
+          <div class="big">${eggs?eggs.toLocaleString("es"):"-"}</div></div></div></div>`;
+    return c;
+  }).join("");
+  const total=pasos.reduce((t,pa)=>t+(pa.final?(pa.p.p6>0?1/pa.p.p6:0):(pa.p.pMejora>0?1/pa.p.pMejora:0)),0);
+  if(ult.final) h+=`<div class="card"><b>Total estimado</b>
+    <div class="big" style="margin-top:6px">${Math.round(total).toLocaleString("es")} huevos</div>
+    <div class="muted" style="margin-top:6px">Es una estimacion: cada paso asume que crias hasta conseguir una cria util antes de pasar al siguiente.</div></div>`;
+  el.innerHTML=h;
+}
+function llenaTarget(){
+  const sel=$("plTarget"); if(!sel) return;
+  const antes=sel.value;
+  const ids=[...new Set(BOX.map(m=>m.sid))].sort((a,b)=>a-b);
+  sel.innerHTML = ids.length? ids.map(i=>`<option value="${i}">${esc(byId[i].name)}</option>`).join("")
+    : '<option value="">(caja vacia)</option>';
+  if(antes && [...sel.options].some(o=>o.value===antes)) sel.value=antes;
+}
+function refrescaPlan(){ llenaTarget(); if($("plTarget")&&$("plTarget").value) renderPlan(); }
+$("plGo").onclick=renderPlan;
 function renderBest(){ renderBestInto($("bestOut")); renderBestInto($("bestBox")); }
 renderBox();
 </script>
@@ -540,22 +658,27 @@ $("eSel").onchange=()=>{
 $("eSel").onchange();
 
 $("help").innerHTML=`<div class="card">
-<h4 style="font-size:17px;margin-bottom:10px">Como funciona la crianza</h4>
-<p style="margin-bottom:10px"><b>Sin ningun objeto</b>, el huevo hereda <b>3</b> IV al azar de los padres. El resto sale aleatorio: cada uno tiene 1 entre 32 de ser 31.</p>
-<p style="margin-bottom:10px"><b>${KNOT}</b> sube esa herencia de 3 a <b>5</b>. Lo lleva uno solo de los dos progenitores.</p>
-<p style="margin-bottom:10px"><b>Los objetos Recios</b> obligan a heredar ese IV concreto del progenitor que lo lleva puesto, y ocupan una de las plazas de herencia.</p>
-<p style="margin-bottom:12px">Cada Pokemon solo puede llevar <b>un objeto</b>, asi que lo normal es ${KNOT} en uno y un objeto Recio en el otro.</p>
-<table><tr><th>Objeto</th><th>IV que asegura</th></tr>
+<h4 style="font-size:17px;margin-bottom:10px">Como funciona la crianza en Diosesmon</h4>
+<p style="margin-bottom:10px"><b>Cada IV de la cria sale dentro del rango que marcan los dos padres.</b>
+Si uno tiene 10 en Velocidad y el otro 31, la cria saldra con algo entre 10 y 31. Si los dos tienen 31, la cria tendra 31 seguro.</p>
+<p style="margin-bottom:10px"><b>Consecuencia importante:</b> la cria <b>nunca supera</b> al mejor de sus padres.
+Si ninguno de los dos llega a 31 en una estadistica, esa cria no puede tener 31 ahi por mucho que lo intentes.
+Hay que meter en la cadena un Pokemon que ya lo tenga.</p>
+<p style="margin-bottom:10px">Por eso dos padres <b>6x31 dan siempre un 6x31</b>, sin necesidad de ningun objeto.</p>
+<p style="margin-bottom:12px"><b>Los objetos Recios</b> fijan un IV concreto al valor exacto del progenitor que lo lleva.
+Como cada Pokemon lleva un objeto, puedes asegurar <b>dos estadisticas por cruce</b>, una por progenitor.</p>
+<table><tr><th>Objeto</th><th>IV que fija</th></tr>
 ${ITEM.map(function(n,i){return "<tr><td>"+n+"</td><td>"+STATL[i]+"</td></tr>";}).join("")}</table>
 <hr>
-<p style="margin-bottom:10px"><b>Por que casi nunca sale el 6x31.</b> Aunque los dos padres sean perfectos, con ${KNOT} solo se heredan 5 IV: el sexto siempre sale al azar. Por eso el techo es <b>3,125%</b>, 1 de cada 32 huevos. No es mala suerte tuya.</p>
-<p style="margin-bottom:10px"><b>Cuando NO conviene el ${KNOT}.</b> Si hay dos o mas estadisticas en las que ninguno de los dos padres llega a 31, forzar 5 herencias garantiza que entre alguna mala. En ese caso sale mejor heredar solo 3 y confiar en el azar. La pestaña Emparejar lo calcula y te avisa.</p>
+<p style="margin-bottom:10px"><b>Estrategia:</b> pon cada Recio en el progenitor que ya tenga 31 en la estadistica que al otro le falta.
+Con dos 5x31 a los que les falta un IV distinto, eso da un 6x31 al primer huevo.</p>
+<p style="margin-bottom:10px">La pestaña <b>Plan de crianza</b> encadena los cruces por ti: te dice que pareja juntar en cada paso, que objeto ponerle a cada uno, que sexo elegir para la cria y cuantos huevos hacen falta de media.</p>
 <hr>
 <p style="margin-bottom:10px"><b>Especie de la cria:</b> siempre la de la <b>madre</b>. Slugma macho + Koffing hembra da Koffing.</p>
-<p style="margin-bottom:10px"><b>Ditto</b> cria con casi todo, menos con otro Ditto y con el grupo Desconocido. La cria sale de la especie del otro progenitor.</p>
-<p style="margin-bottom:10px"><b>Grupo Desconocido:</b> legendarios, formas bebe, Nidorina y Nidoqueen. No crian de ninguna forma.</p>
-<p style="margin-bottom:10px"><b>Formas bebe:</b> Azurill, Wynaut, Bonsly, Mime Jr., Munchlax y Mantyke solo nacen asi si un progenitor lleva su incienso. Sin el, el huevo nace ya evolucionado.</p>
-<p><b>Naturaleza:</b> con <b>Piedra Eterna</b> en un progenitor, la cria hereda su naturaleza exacta. Ojo: ocupa el hueco del objeto, asi que renuncias al ${KNOT} o al Recio de ese Pokemon.</p>
+<p style="margin-bottom:10px"><b>Ditto</b> cria con casi todo, menos con otro Ditto y con el grupo Desconocido.</p>
+<p style="margin-bottom:10px"><b>Grupo Desconocido:</b> legendarios, formas bebe, Nidorina y Nidoqueen. No crian.</p>
+<p style="margin-bottom:10px"><b>Formas bebe:</b> Azurill, Wynaut, Bonsly, Mime Jr., Munchlax y Mantyke solo nacen asi si un progenitor lleva su incienso.</p>
+<p><b>Naturaleza:</b> con <b>Piedra Eterna</b> la cria hereda la naturaleza exacta de quien la lleve, pero ocupa el hueco del objeto y pierdes ese Recio.</p>
 </div>`;
 </script>
 <footer>
